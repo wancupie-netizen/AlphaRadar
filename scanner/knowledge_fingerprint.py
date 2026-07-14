@@ -1,0 +1,52 @@
+"""
+AlphaRadar Knowledge Fingerprint
+
+Build a stable fingerprint from an Intelligence Package.
+
+Responsibilities
+----------------
+- Generate deterministic fingerprints
+- Normalize interpretation ordering
+
+This module does NOT:
+- access databases
+- decide whether knowledge should be stored
+- save data
+"""
+
+import hashlib
+
+
+def build_knowledge_fingerprint(package: dict) -> str:
+    """
+    Build a stable Knowledge Fingerprint.
+
+    Parameters
+    ----------
+    package : dict
+
+    Returns
+    -------
+    str
+        SHA-256 fingerprint.
+    """
+
+    decision = package["decision"]["decision"]
+
+    interpretations = sorted(
+        interpretation.value
+        if hasattr(interpretation, "value")
+        else interpretation
+        for interpretation in package["interpretations"]
+    )
+
+    fingerprint_source = "|".join(
+        [
+            decision,
+            *interpretations,
+        ]
+    )
+
+    return hashlib.sha256(
+        fingerprint_source.encode("utf-8")
+    ).hexdigest()
