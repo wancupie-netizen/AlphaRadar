@@ -16,6 +16,26 @@ This module does NOT:
 
 import hashlib
 
+from core.artifacts.decision_artifact import DecisionArtifact
+
+
+def _decision_value(decision) -> str:
+    """
+    Return a normalized decision value.
+
+    Supports:
+    - DecisionArtifact
+    - Legacy dict
+    """
+
+    if isinstance(decision, DecisionArtifact):
+        return decision.recommended_action
+
+    if isinstance(decision, dict):
+        return decision.get("decision", "")
+
+    return str(decision)
+
 
 def build_knowledge_fingerprint(package: dict) -> str:
     """
@@ -31,12 +51,14 @@ def build_knowledge_fingerprint(package: dict) -> str:
         SHA-256 fingerprint.
     """
 
-    decision = package["decision"]["decision"]
+    decision = _decision_value(
+        package["decision"]
+    )
 
     interpretations = sorted(
         interpretation.value
         if hasattr(interpretation, "value")
-        else interpretation
+        else str(interpretation)
         for interpretation in package["interpretations"]
     )
 

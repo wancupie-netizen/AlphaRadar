@@ -16,98 +16,222 @@ This module does NOT:
 - make decisions
 """
 
+from core.artifacts.decision_artifact import DecisionArtifact
+
 from scanner.database import supabase
-from scanner.knowledge_fingerprint import build_knowledge_fingerprint
+from scanner.knowledge_fingerprint import (
+    build_knowledge_fingerprint,
+)
 
 
-def _serialize_decision(decision: dict) -> dict:
+# --------------------------------------------------
+# Decision Serialization
+# --------------------------------------------------
+
+def _serialize_decision(decision) -> dict:
     """
-    Convert Decision payload into a JSON-safe structure.
+    Convert Decision into a JSON-safe structure.
+
+    Supports:
+    - DecisionArtifact
+    - Legacy dict
     """
+
+    if isinstance(decision, DecisionArtifact):
+
+        return {
+
+            "artifact_id":
+                decision.artifact_id,
+
+            "decision":
+                decision.recommended_action,
+
+            "confidence":
+                decision.confidence,
+
+            "summary":
+                decision.summary,
+
+            "reasons": [
+
+                {
+
+                    "title":
+                        reason.title,
+
+                    "description":
+                        reason.description,
+
+                    "evidence": [
+
+                        {
+
+                            "name":
+                                evidence.name,
+
+                            "value":
+                                evidence.value,
+
+                            "source":
+                                evidence.source,
+
+                        }
+
+                        for evidence in reason.evidence
+
+                    ],
+
+                }
+
+                for reason in decision.reasons
+
+            ],
+
+        }
+
+    # --------------------------------------------
+    # Legacy compatibility
+    # --------------------------------------------
 
     return {
-        "decision": (
-            decision["decision"].value
-            if hasattr(decision["decision"], "value")
-            else decision["decision"]
-        ),
-        "confidence": decision["confidence"],
-        "reasons": decision["reasons"],
+
+        "decision":
+            decision.get("decision"),
+
+        "confidence":
+            decision.get("confidence"),
+
+        "reasons":
+            decision.get("reasons", []),
+
     }
 
+
+# --------------------------------------------------
+# Package Serialization
+# --------------------------------------------------
 
 def _serialize_package(package: dict) -> dict:
     """
-    Convert an Intelligence Package into a JSON-safe structure.
+    Convert Intelligence Package into JSON-safe structure.
     """
 
     return {
-        "token": package["token"],
 
-        "observation": package["observation"],
+        "token":
+            package["token"],
 
-        "signals": sorted(
-            signal.value if hasattr(signal, "value") else signal
-            for signal in package["signals"]
-        ),
+        "observation":
+            package["observation"],
 
-        "interpretations": sorted(
-            interpretation.value
-            if hasattr(interpretation, "value")
-            else interpretation
-            for interpretation in package["interpretations"]
-        ),
+        "signals":
 
-        "decision": _serialize_decision(
-            package["decision"]
-        ),
+            sorted(
+
+                signal.value
+                if hasattr(signal, "value")
+                else signal
+
+                for signal in package["signals"]
+
+            ),
+
+        "interpretations":
+
+            sorted(
+
+                interpretation.value
+                if hasattr(
+                    interpretation,
+                    "value",
+                )
+                else interpretation
+
+                for interpretation
+                in package["interpretations"]
+
+            ),
+
+        "decision":
+
+            _serialize_decision(
+                package["decision"]
+            ),
+
     }
 
 
+# --------------------------------------------------
+# Save
+# --------------------------------------------------
+
 def save_intelligence(package: dict):
-    """
-    Save an Intelligence Package.
-    """
 
-    serialized_package = _serialize_package(package)
+    serialized = _serialize_package(package)
 
-    fingerprint = build_knowledge_fingerprint(package)
+    fingerprint = build_knowledge_fingerprint(
+        package
+    )
 
     response = (
+
         supabase
+
         .table("intelligence_events")
-        .insert({
 
-            "token": serialized_package["token"],
+        .insert(
 
-            "decision": serialized_package["decision"]["decision"],
+            {
 
-            "confidence": serialized_package["decision"]["confidence"],
+                "token":
+                    serialized["token"],
 
-            "knowledge_fingerprint": fingerprint,
+                "decision":
+                    serialized["decision"]["decision"],
 
-            "intelligence_package": serialized_package,
+                "confidence":
+                    serialized["decision"]["confidence"],
 
-        })
+                "knowledge_fingerprint":
+                    fingerprint,
+
+                "intelligence_package":
+                    serialized,
+
+            }
+
+        )
+
         .execute()
+
     )
 
     return response
 
 
+# --------------------------------------------------
+# Load
+# --------------------------------------------------
+
 def load_latest_intelligence(token: str):
-    """
-    Load the latest stored Intelligence Package.
-    """
 
     response = (
+
         supabase
+
         .table("intelligence_events")
+
         .select("intelligence_package")
+
         .eq("token", token)
+
         .order("created_at", desc=True)
+
         .limit(1)
+
         .execute()
+
     )
 
     if not response.data:

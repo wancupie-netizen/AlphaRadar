@@ -1,7 +1,7 @@
 """
 AlphaRadar Decision Engine
 
-Convert market interpretations into actionable decisions.
+Convert market interpretations into an official DecisionArtifact.
 
 Responsibilities
 ----------------
@@ -10,10 +10,13 @@ Responsibilities
 - Preserve reasoning
 
 This module does NOT:
-- generate narratives
+- perform validation
 - execute trades
 - predict prices
+- perform learning
 """
+
+from datetime import datetime, timezone
 
 from scanner.decision_types import (
     DecisionType,
@@ -22,6 +25,13 @@ from scanner.decision_types import (
 )
 
 from scanner.interpretation_types import InterpretationType
+
+from core.artifacts.decision_artifact import (
+    DecisionArtifact,
+    DecisionContext,
+    DecisionMetadata,
+    Reason,
+)
 
 # --------------------------------------------------
 # Decision Rules
@@ -64,11 +74,22 @@ DECISION_RULES = {
 }
 
 
+# --------------------------------------------------
+# Decision Engine
+# --------------------------------------------------
+
 def make_decision(
     interpretations: set[InterpretationType],
-) -> dict:
+    *,
+    symbol: str,
+    pair: str,
+    engine_version: str = "1.0.0",
+) -> DecisionArtifact:
     """
-    Produce a market decision from market interpretations.
+    Produce an immutable DecisionArtifact from market interpretations.
+
+    Validation is intentionally NOT performed here.
+    Decision Gate is responsible for validation.
     """
 
     candidate_decisions: set[DecisionType] = set()
@@ -80,24 +101,43 @@ def make_decision(
         if decision is not None:
             candidate_decisions.add(decision)
 
-    if not candidate_decisions:
+    if candidate_decisions:
 
-        return {
-            "decision": DecisionType.IGNORE,
-            "confidence": DECISION_CONFIDENCE[DecisionType.IGNORE],
-            "reasons": [],
-        }
+        final_decision = max(
+            candidate_decisions,
+            key=lambda decision: DECISION_PRIORITY[decision]
+        )
 
-    final_decision = max(
-        candidate_decisions,
-        key=lambda decision: DECISION_PRIORITY[decision]
+    else:
+
+        final_decision = DecisionType.IGNORE
+
+    reasons = tuple(
+        Reason(
+            title=reason.value,
+            description="Derived from Interpretation Engine",
+        )
+        for reason in sorted(
+            interpretations,
+            key=lambda item: item.value
+        )
     )
 
-    return {
-        "decision": final_decision,
-        "confidence": DECISION_CONFIDENCE[final_decision],
-        "reasons": sorted(
-            reason.value
-            for reason in interpretations
-        ),
-    }
+    context = DecisionContext()
+
+    metadata = DecisionMetadata(
+        engine_version=engine_version,
+        timestamp=datetime.now(timezone.utc),
+        symbol=symbol,
+        pair=pair,
+        interpretation_version="1.0.0",
+    )
+
+    return DecisionArtifact(
+        recommended_action=final_decision.value,
+        confidence=DECISION_CONFIDENCE[final_decision],
+        summary=f"Recommended action: {final_decision.value}",
+        context=context,
+        reasons=reasons,
+        metadata=metadata,
+    )

@@ -13,7 +13,7 @@ from scanner.intelligence_store import (
 )
 
 from pulse.pulse import start_job, finish_job
-
+import traceback
 
 def run_scan(token):
     """
@@ -190,8 +190,7 @@ def run_scan(token):
     except Exception as e:
 
         print("\n❌ AlphaRadar Exception")
-        print(type(e).__name__)
-        print(e)
+        traceback.print_exc()
 
         try:
 
@@ -204,8 +203,7 @@ def run_scan(token):
         except Exception as pulse_error:
 
             print("\n⚠️ Pulse Update Failed")
-            print(type(pulse_error).__name__)
-            print(pulse_error)
+            traceback.print_exc()
 
         return {
 

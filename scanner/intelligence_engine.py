@@ -7,7 +7,7 @@ Responsibilities
 ----------------
 - Detect signals
 - Detect interpretations
-- Make decisions
+- Build DecisionArtifact
 - Return a complete intelligence package
 
 This module does NOT:
@@ -29,24 +29,51 @@ def build_intelligence(
     Build a complete Intelligence Package.
     """
 
+    # ---------------------------------------
+    # Step 1 : Signal Detection
+    # ---------------------------------------
+
     signals = detect_signals(observation)
+
+    # ---------------------------------------
+    # Step 2 : Interpretation
+    # ---------------------------------------
 
     interpretations = detect_interpretations(signals)
 
-    decision = make_decision(interpretations)
+    # ---------------------------------------
+    # Step 3 : Decision
+    # ---------------------------------------
+
+    decision = make_decision(
+        interpretations=interpretations,
+        symbol=token,
+        pair=token,
+    )
+
+    # ---------------------------------------
+    # Step 4 : Intelligence Package
+    # ---------------------------------------
 
     return {
+
         "token": token,
+
         "observation": observation,
+
         "signals": sorted(
             signal.value if hasattr(signal, "value") else signal
             for signal in signals
         ),
+
         "interpretations": sorted(
             interpretation.value
             if hasattr(interpretation, "value")
             else interpretation
             for interpretation in interpretations
         ),
+
+        # New Domain Object
         "decision": decision,
+
     }

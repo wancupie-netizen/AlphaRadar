@@ -84,15 +84,43 @@ def main():
 
         decision = result["decision"]
 
-        print(f"Decision   : {decision['decision']}")
-        print(f"Confidence : {decision['confidence']}")
+        print(
+            f"Decision   : "
+            f"{decision.recommended_action}"
+        )
+
+        print(
+            f"Confidence : "
+            f"{decision.confidence}"
+        )
+
+        print("\nSummary")
+        print("-------------------------")
+        print(decision.summary)
 
         print("\nReasons")
+        print("-------------------------")
 
-        if decision["reasons"]:
-            for reason in decision["reasons"]:
-                print(f"- {reason}")
+        if decision.reasons:
+
+            for reason in decision.reasons:
+
+                print(f"- {reason.title}")
+
+                if reason.description:
+                    print(f"    {reason.description}")
+
+                if reason.evidence:
+
+                    for evidence in reason.evidence:
+
+                        print(
+                            f"      • "
+                            f"{evidence.name}: {evidence.value}"
+                        )
+
         else:
+
             print("(none)")
 
         # ---------------------------------------
@@ -101,6 +129,7 @@ def main():
 
         print("\nKnowledge")
         print("-------------------------")
+
         print(
             f"Stored     : "
             f"{result.get('knowledge_saved', False)}"

@@ -17,6 +17,8 @@ This module does NOT:
 - generate fingerprints
 """
 
+from core.artifacts.decision_artifact import DecisionArtifact
+
 
 def _normalize_interpretations(package: dict) -> set[str]:
     """
@@ -29,6 +31,27 @@ def _normalize_interpretations(package: dict) -> set[str]:
     }
 
 
+def _decision_value(decision) -> str | None:
+    """
+    Return comparable decision value.
+
+    Supports:
+    - DecisionArtifact (new)
+    - legacy dict (backward compatibility)
+    """
+
+    if decision is None:
+        return None
+
+    if isinstance(decision, DecisionArtifact):
+        return decision.recommended_action
+
+    if isinstance(decision, dict):
+        return decision.get("decision")
+
+    return None
+
+
 def should_store(
     current: dict,
     previous: dict | None,
@@ -39,33 +62,29 @@ def should_store(
     """
 
     # ---------------------------------------
-    # First knowledge
+    # First Knowledge
     # ---------------------------------------
 
     if previous is None:
         return True
 
     # ---------------------------------------
-    # Decision changed
+    # Decision Changed
     # ---------------------------------------
 
-    current_decision = (
-        current
-        .get("decision", {})
-        .get("decision")
+    current_decision = _decision_value(
+        current.get("decision")
     )
 
-    previous_decision = (
-        previous
-        .get("decision", {})
-        .get("decision")
+    previous_decision = _decision_value(
+        previous.get("decision")
     )
 
     if current_decision != previous_decision:
         return True
 
     # ---------------------------------------
-    # Interpretation changed
+    # Interpretation Changed
     # ---------------------------------------
 
     if (
@@ -76,7 +95,7 @@ def should_store(
         return True
 
     # ---------------------------------------
-    # No meaningful change
+    # No Meaningful Change
     # ---------------------------------------
 
     return False
