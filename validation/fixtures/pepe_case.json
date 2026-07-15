@@ -1,0 +1,29 @@
+{
+    "token": "",
+
+    "current": {
+
+        "price": 0,
+
+        "liquidity": 0,
+
+        "volume_24h": 0,
+
+        "market_cap": 0,
+
+        "fdv": 0
+    },
+
+    "previous": {
+
+        "price": 0,
+
+        "liquidity": 0,
+
+        "volume_24h": 0,
+
+        "market_cap": 0,
+
+        "fdv": 0
+    }
+}
