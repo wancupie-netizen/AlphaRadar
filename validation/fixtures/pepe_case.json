@@ -1,29 +1,11 @@
 {
-    "token": "",
-
-    "current": {
-
-        "price": 0,
-
-        "liquidity": 0,
-
-        "volume_24h": 0,
-
-        "market_cap": 0,
-
-        "fdv": 0
-    },
-
-    "previous": {
-
-        "price": 0,
-
-        "liquidity": 0,
-
-        "volume_24h": 0,
-
-        "market_cap": 0,
-
-        "fdv": 0
+    "token": "PEPE",
+    "observation": {
+        "token": "PEPE",
+        "price_change_pct": 0.4693,
+        "liquidity_change_pct": 0.4004,
+        "volume_change_pct": -0.5373,
+        "market_cap_change_pct": 0.4621,
+        "fdv_change_pct": 0.4621
     }
 }

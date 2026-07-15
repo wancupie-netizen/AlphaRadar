@@ -1,7 +1,9 @@
 {
-    "decision": "",
-
-    "confidence": "",
-
-    "interpretations": []
+    "recommended_action": "ALERT",
+    "confidence": "HIGH",
+    "interpretations": [
+        "EARLY_MOMENTUM",
+        "STRONG_LIQUIDITY",
+        "STRONG_MOMENTUM"
+    ]
 }

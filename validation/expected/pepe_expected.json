@@ -1,7 +1,7 @@
 {
-    "decision": "",
-
-    "confidence": "",
-
-    "interpretations": []
+    "recommended_action": "REVIEW",
+    "confidence": "MEDIUM",
+    "interpretations": [
+        "WEAK_BREAKOUT"
+    ]
 }

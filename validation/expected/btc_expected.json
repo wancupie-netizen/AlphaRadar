@@ -1,7 +1,5 @@
 {
-    "decision": "",
-
-    "confidence": "",
-
+    "recommended_action": "IGNORE",
+    "confidence": "LOW",
     "interpretations": []
 }

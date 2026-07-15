@@ -1,14 +1,17 @@
 """
-Smoke Test
+AlphaRadar Smoke Test
 
-Verifies that all core AlphaRadar modules
-can be imported successfully.
+Purpose
+-------
+Verify that all core AlphaRadar modules can be imported successfully.
 
-No network calls.
+Smoke Test only checks module availability.
 
-No database calls.
-
-No business logic.
+It does NOT:
+- call APIs
+- connect to Supabase
+- perform market scans
+- execute business logic
 """
 
 from importlib import import_module
@@ -16,29 +19,32 @@ from importlib import import_module
 
 MODULES = {
 
-    "Scanner Engine": "scanner.runner",
+    # Core Scanner
+    "Runner": "scanner.runner",
 
-    "Observation Builder": "engines.observation_builder",
+    # Core Engines
+    "Observation Builder": "scanner.observation_builder",
+    "Signal Detector": "scanner.signal_detector",
+    "Interpretation Engine": "scanner.interpretation_engine",
+    "Decision Engine": "scanner.decision_engine",
+    "Intelligence Engine": "scanner.intelligence_engine",
 
-    "Signal Detector": "engines.signal_detector",
-
-    "Interpretation Engine": "engines.interpretation_engine",
-
-    "Decision Engine": "engines.decision_engine",
-
-    "Knowledge Store": "knowledge.store",
+    # Knowledge Layer
+    "Knowledge Gate": "scanner.knowledge_gate",
+    "Intelligence Store": "scanner.intelligence_store",
+    "Knowledge Fingerprint": "scanner.knowledge_fingerprint",
 
 }
 
 
 def run():
 
+    print("Running Smoke Test...\n")
+
     passed = 0
     failed = 0
 
     details = []
-
-    print("Running Smoke Test...\n")
 
     for name, module in MODULES.items():
 
@@ -62,13 +68,11 @@ def run():
 
     print()
 
-    status = "PASS" if failed == 0 else "FAIL"
-
     return {
 
         "name": "Smoke Test",
 
-        "status": status,
+        "status": "PASS" if failed == 0 else "FAIL",
 
         "passed": passed,
 
