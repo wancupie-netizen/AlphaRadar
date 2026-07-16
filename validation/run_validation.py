@@ -4,7 +4,7 @@ AlphaRadar Validation Suite
 Entry point for all engineering validation.
 
 Version:
-    v0.8.1-alpha
+    v0.8.2-alpha
 """
 
 from pathlib import Path
@@ -26,6 +26,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from validation.smoke_test import run as run_smoke
 from validation.decision_gate_test import run as run_decision_gate
 from validation.outcome_engine_test import run as run_outcome_engine
+from validation.learning_engine_test import run as run_learning_engine
 from validation.regression_test import run as run_regression
 
 
@@ -39,7 +40,7 @@ def print_header():
     print("=" * 60)
     print("AlphaRadar Validation Suite")
     print("=" * 60)
-    print("Version : v0.8.1-alpha")
+    print("Version : v0.8.2-alpha")
     print()
 
 
@@ -156,6 +157,38 @@ def main():
         return
 
     if outcome_engine["status"] != "PASS":
+
+        print_summary(results)
+        return
+
+    # ------------------------------------------------------
+    # Learning Engine Test
+    # ------------------------------------------------------
+
+    try:
+
+        learning_engine = run_learning_engine()
+        results.append(learning_engine)
+
+    except Exception as e:
+
+        print("[FAIL] Learning Engine Test")
+        print(f"       {e}")
+
+        results.append(
+            {
+                "name": "Learning Engine Test",
+                "status": "FAIL",
+                "passed": 0,
+                "failed": 1,
+                "details": [str(e)],
+            }
+        )
+
+        print_summary(results)
+        return
+
+    if learning_engine["status"] != "PASS":
 
         print_summary(results)
         return
