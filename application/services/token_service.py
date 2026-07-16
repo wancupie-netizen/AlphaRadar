@@ -1,121 +1,70 @@
 """
 AlphaRadar Token Service
 
-Application Service responsible for assembling
-Token Detail responses.
+Application Service responsible for the
+Token Detail use case.
 
 Responsibilities
 ----------------
-- Collect Core Artifacts.
-- Build TokenDetailDTO.
+- Execute the Token Detail use case.
+- Coordinate Query and Assembler.
+- Return TokenDetailDTO.
 - Remain independent of HTTP.
 - Contain no business logic.
-
-The service acts as the bridge between the
-Core Intelligence Layer and the Presentation Layer.
 """
 
-from application.mappers.token_mapper import (
-    build_token_detail,
-)
-
-from core.artifacts.decision_artifact import (
-    DecisionArtifact,
-)
-
-from core.artifacts.outcome_artifact import (
-    OutcomeArtifact,
-)
-
-from core.artifacts.learning_artifact import (
-    LearningArtifact,
+from application.assemblers.token_assembler import (
+    TokenAssembler,
 )
 
 from application.dto.token_detail_dto import (
     TokenDetailDTO,
 )
 
+from application.queries.token_query import (
+    TokenQuery,
+)
+
 
 class TokenService:
     """
-    Application Service for Token Detail.
-
-    This service performs orchestration only.
+    Token Detail Application Service.
     """
 
-    def build_token_detail(
+    def __init__(self):
+
+        self._query = TokenQuery()
+
+        self._assembler = TokenAssembler()
+
+    def get_token_detail(
 
         self,
 
-        *,
-
-        header: dict,
-
-        observation: dict,
-
-        signals: list,
-
-        interpretations: list,
-
-        decision: DecisionArtifact,
-
-        outcome: OutcomeArtifact,
-
-        learning: LearningArtifact,
-
-        knowledge: list,
+        symbol: str,
 
     ) -> TokenDetailDTO:
         """
-        Assemble a Token Detail DTO.
+        Retrieve Token Detail.
 
         Parameters
         ----------
-        header
-            Token header information.
-
-        observation
-            Observation payload.
-
-        signals
-            Signal list.
-
-        interpretations
-            Interpretation list.
-
-        decision
-            DecisionArtifact.
-
-        outcome
-            OutcomeArtifact.
-
-        learning
-            LearningArtifact.
-
-        knowledge
-            Historical knowledge records.
+        symbol
+            Token symbol.
 
         Returns
         -------
         TokenDetailDTO
         """
 
-        return build_token_detail(
+        payload = self._query.get_token(
 
-            header=header,
+            symbol=symbol,
 
-            observation=observation,
+        )
 
-            signals=signals,
+        return self._assembler.assemble(
 
-            interpretations=interpretations,
-
-            decision=decision,
-
-            outcome=outcome,
-
-            learning=learning,
-
-            knowledge=knowledge,
+            payload,
 
         )
