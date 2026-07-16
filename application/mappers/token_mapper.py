@@ -32,10 +32,6 @@ from core.artifacts.outcome_artifact import OutcomeArtifact
 from core.artifacts.learning_artifact import LearningArtifact
 
 
-# ==========================================================
-# Helper
-# ==========================================================
-
 def _iso(value) -> str:
 
     if value is None:
@@ -46,10 +42,6 @@ def _iso(value) -> str:
 
     return str(value)
 
-
-# ==========================================================
-# Mapper
-# ==========================================================
 
 def build_token_detail(
 
@@ -63,20 +55,15 @@ def build_token_detail(
 
     interpretations: list,
 
-    decision: DecisionArtifact,
+    decision: DecisionArtifact | None,
 
-    outcome: OutcomeArtifact,
+    outcome: OutcomeArtifact | None,
 
-    learning: LearningArtifact,
+    learning: LearningArtifact | None,
 
     knowledge: list,
 
 ) -> TokenDetailDTO:
-    """
-    Build a complete TokenDetailDTO.
-
-    This mapper performs object translation only.
-    """
 
     header_dto = TokenHeaderDTO(
 
@@ -113,6 +100,7 @@ def build_token_detail(
         )
 
         for signal in signals
+
     ]
 
     interpretation_dto = [
@@ -122,100 +110,125 @@ def build_token_detail(
         )
 
         for item in interpretations
+
     ]
 
-    decision_dto = DecisionDTO(
+    # --------------------------------------------------
+    # Decision
+    # --------------------------------------------------
 
-        recommended_action=decision.recommended_action,
+    decision_dto = None
 
-        confidence=str(decision.confidence),
+    if decision is not None:
 
-        summary=decision.summary,
+        decision_dto = DecisionDTO(
 
-        artifact_id=decision.artifact_id,
+            recommended_action=decision.recommended_action,
 
-        timestamp=_iso(
-            decision.metadata.timestamp
-        ),
+            confidence=str(decision.confidence),
 
-        engine_version=decision.metadata.engine_version,
+            summary=decision.summary,
 
-        reasons=[
+            artifact_id=decision.artifact_id,
 
-            reason.title
-
-            for reason in decision.reasons
-
-        ],
-
-        context={
-
-            "trend": decision.context.trend,
-
-            "market_bias": decision.context.market_bias,
-
-            "risk": decision.context.risk,
-
-        },
-    )
-
-    snapshot = outcome.market_snapshot
-
-    outcome_dto = OutcomeDTO(
-
-        snapshot_status=outcome.snapshot_status,
-
-        observation_window=outcome.observation_window,
-
-        artifact_id=outcome.artifact_id,
-
-        market_snapshot={
-
-            "symbol": snapshot.symbol,
-
-            "pair": snapshot.pair,
-
-            "chain": snapshot.chain,
-
-            "price": str(snapshot.price),
-
-            "liquidity": str(snapshot.liquidity),
-
-            "volume_24h": str(snapshot.volume_24h),
-
-            "market_cap": (
-                str(snapshot.market_cap)
-                if snapshot.market_cap is not None
-                else None
+            timestamp=_iso(
+                decision.metadata.timestamp
             ),
 
-            "fdv": (
-                str(snapshot.fdv)
-                if snapshot.fdv is not None
-                else None
+            engine_version=decision.metadata.engine_version,
+
+            reasons=[
+                reason.title
+                for reason in decision.reasons
+            ],
+
+            context={
+
+                "trend": decision.context.trend,
+
+                "market_bias": decision.context.market_bias,
+
+                "risk": decision.context.risk,
+
+            },
+
+        )
+
+    # --------------------------------------------------
+    # Outcome
+    # --------------------------------------------------
+
+    outcome_dto = None
+
+    if outcome is not None:
+
+        snapshot = outcome.market_snapshot
+
+        outcome_dto = OutcomeDTO(
+
+            snapshot_status=outcome.snapshot_status,
+
+            observation_window=outcome.observation_window,
+
+            artifact_id=outcome.artifact_id,
+
+            market_snapshot={
+
+                "symbol": snapshot.symbol,
+
+                "pair": snapshot.pair,
+
+                "chain": snapshot.chain,
+
+                "price": str(snapshot.price),
+
+                "liquidity": str(snapshot.liquidity),
+
+                "volume_24h": str(snapshot.volume_24h),
+
+                "market_cap": (
+                    str(snapshot.market_cap)
+                    if snapshot.market_cap is not None
+                    else None
+                ),
+
+                "fdv": (
+                    str(snapshot.fdv)
+                    if snapshot.fdv is not None
+                    else None
+                ),
+
+                "captured_at": _iso(
+                    snapshot.captured_at
+                ),
+
+            },
+
+        )
+
+    # --------------------------------------------------
+    # Learning
+    # --------------------------------------------------
+
+    learning_dto = None
+
+    if learning is not None:
+
+        learning_dto = LearningDTO(
+
+            learning_status=learning.learning_status,
+
+            summary=learning.summary,
+
+            created_at=_iso(
+                learning.created_at
             ),
 
-            "captured_at": _iso(
-                snapshot.captured_at
-            ),
+            artifact_id=learning.artifact_id,
 
-        },
-    )
+            notes=learning.notes,
 
-    learning_dto = LearningDTO(
-
-        learning_status=learning.learning_status,
-
-        summary=learning.summary,
-
-        created_at=_iso(
-            learning.created_at
-        ),
-
-        artifact_id=learning.artifact_id,
-
-        notes=learning.notes,
-    )
+        )
 
     knowledge_dto = [
 
@@ -253,6 +266,7 @@ def build_token_detail(
         request_id=str(uuid4()),
 
         processing_time_ms=0,
+
     )
 
     return TokenDetailDTO(
@@ -274,4 +288,5 @@ def build_token_detail(
         knowledge=knowledge_dto,
 
         meta=meta,
+
     )

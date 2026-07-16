@@ -176,11 +176,11 @@ class TokenDetailDTO:
 
     interpretations: List[InterpretationDTO]
 
-    decision: DecisionDTO
+    decision: Optional[DecisionDTO]
 
-    outcome: OutcomeDTO
+    outcome: Optional[OutcomeDTO]
 
-    learning: LearningDTO
+    learning: Optional[LearningDTO]
 
     knowledge: List[KnowledgeDTO]
 
