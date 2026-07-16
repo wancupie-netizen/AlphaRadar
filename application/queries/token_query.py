@@ -6,22 +6,18 @@ Token Detail data.
 
 Responsibilities
 ----------------
-- Retrieve Token information.
+- Coordinate Token retrieval.
+- Delegate retrieval to TokenQueryService.
 - Remain storage independent.
 - Contain no business logic.
-
-Notes
------
-Current implementation uses deterministic
-placeholder data.
-
-Future implementation will retrieve
-validated intelligence from the
-Intelligence Store.
 """
 
 from application.queries.base_query import (
     BaseQuery,
+)
+
+from application.services.token_query_service import (
+    TokenQueryService,
 )
 
 
@@ -30,67 +26,26 @@ class TokenQuery(BaseQuery):
     Official Token Query.
     """
 
+    def __init__(self):
+
+        self._service = TokenQueryService()
+
     def get_token(
-
         self,
-
         symbol: str,
-
-    ) -> dict:
+    ) -> dict | None:
         """
-        Retrieve Token Detail data.
+        Retrieve Token Detail payload.
 
         Parameters
         ----------
-        symbol
-            Token symbol.
+        symbol : str
 
         Returns
         -------
-        dict
-            Token Detail payload.
+        dict | None
         """
 
-        return {
-
-            "header": {
-
-                "symbol": symbol.upper(),
-
-                "pair": f"{symbol.upper()}/USDT",
-
-                "chain": "Ethereum",
-
-                "price": "0.00",
-
-                "liquidity": "0",
-
-                "volume_24h": "0",
-
-                "market_cap": None,
-
-                "fdv": None,
-
-                "last_updated": None,
-
-            },
-
-            "observation": {
-
-                "data": {}
-
-            },
-
-            "signals": [],
-
-            "interpretations": [],
-
-            "decision": None,
-
-            "outcome": None,
-
-            "learning": None,
-
-            "knowledge": [],
-
-        }
+        return self._service.get_token(
+            symbol,
+        )
