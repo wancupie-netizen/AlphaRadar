@@ -31,7 +31,7 @@ class Reason:
 
     title: str
     description: str = ""
-    evidence: Tuple[Evidence, ...] = ()
+    evidence: Tuple["Evidence", ...] = ()
 
 
 # ==========================================================
@@ -97,7 +97,7 @@ class DecisionArtifact:
 
     recommended_action: str
 
-    confidence: int
+    confidence: str
 
     summary: str
 
