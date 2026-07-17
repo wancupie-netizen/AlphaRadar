@@ -1,218 +1,862 @@
-from scanner.dexscreener import search_token
-from scanner.pair_selector import select_best_pair
-from scanner.normalizer import normalize_pair
-from scanner.database import save_market_event
+"""
+AlphaRadar Production Runner v1.0
 
-from scanner.observation_builder import build_observation
-from scanner.intelligence_engine import build_intelligence
+Production Orchestrator
 
-from scanner.knowledge_gate import should_store
-from scanner.intelligence_store import (
-    load_latest_intelligence,
-    save_intelligence,
-)
+Responsibilities
+----------------
+- Coordinate complete scan lifecycle
+- Orchestrate Intelligence Engine
+- Orchestrate Lifecycle Engine
+- Persist Intelligence
+- Persist Lifecycle
+- Return Production Result
 
-from pulse.pulse import start_job, finish_job
+Runner does NOT
+
+- detect signals
+- interpret markets
+- make decisions
+- serialize artifacts
+- access business rules
+"""
+
+from __future__ import annotations
+
 import traceback
 
-def run_scan(token):
+from scanner.config import (
+    DEFAULT_OBSERVATION_WINDOW,
+)
+
+# ==========================================================
+# Infrastructure
+# ==========================================================
+
+from scanner.dexscreener import (
+    search_token,
+)
+
+from scanner.pair_selector import (
+    select_best_pair,
+)
+
+from scanner.normalizer import (
+    normalize_pair,
+)
+
+from scanner.database import (
+    save_market_event,
+)
+
+# ==========================================================
+# Builders
+# ==========================================================
+
+from scanner.observation_builder import (
+    build_observation,
+)
+
+from scanner.market_snapshot_builder import (
+    build_market_snapshot,
+)
+
+# ==========================================================
+# Intelligence
+# ==========================================================
+
+from scanner.intelligence_engine import (
+    build_intelligence,
+)
+
+from scanner.knowledge_gate import (
+    should_store,
+)
+
+from scanner.knowledge_fingerprint import (
+    build_knowledge_fingerprint,
+)
+
+# ==========================================================
+# Lifecycle
+# ==========================================================
+
+from scanner.lifecycle_engine import (
+    build_lifecycle,
+)
+
+# ==========================================================
+# Serializers
+# ==========================================================
+
+from scanner.serializers.intelligence_serializer import (
+    serialize_package,
+)
+
+from scanner.serializers.outcome_serializer import (
+    serialize_outcome,
+)
+
+from scanner.serializers.learning_serializer import (
+    serialize_learning,
+)
+
+from scanner.serializers.knowledge_serializer import (
+    serialize_knowledge,
+)
+
+# ==========================================================
+# Stores
+# ==========================================================
+
+from scanner.intelligence_store import (
+    save_intelligence,
+    load_latest_intelligence,
+)
+
+from scanner.outcome_store import (
+    save_outcome,
+)
+
+from scanner.learning_store import (
+    save_learning,
+)
+
+from scanner.knowledge_store import (
+    save_knowledge,
+)
+
+# ==========================================================
+# Pulse
+# ==========================================================
+
+from pulse.pulse import (
+    start_job,
+    finish_job,
+)
+
+# ==========================================================
+# Constants
+# ==========================================================
+
+RUNNER_VERSION = "1.0.0"
+
+# ==========================================================
+# SECTION B
+# Market Scan
+# ==========================================================
+
+def _scan_market(
+    token: str,
+) -> dict:
     """
-    Run a complete AlphaRadar Scan Job.
+    Execute the complete market scanning pipeline.
 
-    Pipeline
+    Responsibilities
+    ----------------
+    - Scan DexScreener
+    - Select best trading pair
+    - Normalize market data
+    - Persist market event
+    - Build observation
 
-        Start Pulse
-            ↓
-        Scan DexScreener
-            ↓
-        Select Best Pair
-            ↓
-        Normalize Market Data
-            ↓
-        Save Market Event
-            ↓
-        Build Observation
-            ↓
-        Build Intelligence
-            ↓
-        Knowledge Persistence
-            ↓
-        Finish Pulse
-            ↓
-        Return Result
+    Returns
+    -------
+    dict
+
+        event
+        observation
+        first_scan
+
+    Raises
+    ------
+    ValueError
+
+        No valid trading pair found.
     """
 
-    job = start_job(token)
+    # ------------------------------------------------------
+    # Scan DexScreener
+    # ------------------------------------------------------
+
+    data = search_token(
+        token,
+    )
+
+    # ------------------------------------------------------
+    # Select Best Pair
+    # ------------------------------------------------------
+
+    pairs = data.get(
+        "pairs",
+        [],
+    )
+
+    selected_pair = select_best_pair(
+        pairs,
+    )
+
+    if selected_pair is None:
+
+        raise ValueError(
+            "No valid trading pair found."
+        )
+
+    # ------------------------------------------------------
+    # Normalize
+    # ------------------------------------------------------
+
+    event = normalize_pair(
+        selected_pair,
+    )
+
+    # ------------------------------------------------------
+    # Persist Market Event
+    # ------------------------------------------------------
+
+    save_market_event(
+        event,
+    )
+
+    # ------------------------------------------------------
+    # Build Observation
+    # ------------------------------------------------------
+
+    observation = build_observation(
+        token,
+    )
+
+    # ------------------------------------------------------
+    # First Scan Detection
+    # ------------------------------------------------------
+
+    if observation is None:
+
+        return {
+
+            "event":
+                event,
+
+            "observation":
+                None,
+
+            "first_scan":
+                True,
+
+        }
+
+    # ------------------------------------------------------
+    # Normal Flow
+    # ------------------------------------------------------
+
+    return {
+
+        "event":
+            event,
+
+        "observation":
+            observation,
+
+        "first_scan":
+            False,
+
+    }
+
+# ==========================================================
+# SECTION C
+# Intelligence Builder
+# ==========================================================
+
+def _build_intelligence(
+    token: str,
+    observation: dict,
+) ->dict:
+    """
+    Build the complete Intelligence Package.
+
+    Responsibilities
+    ----------------
+    - Build Intelligence Package
+    - Evaluate Knowledge Gate
+    - Load latest Intelligence Package
+
+    Returns
+    -------
+    dict
+
+        intelligence_package
+        latest_package
+        should_persist
+    """
+
+    # ------------------------------------------------------
+    # Intelligence Engine
+    # ------------------------------------------------------
+
+    intelligence_package = build_intelligence(
+
+        token=
+            token,
+
+        observation=
+            observation,
+
+    )
+
+    # ------------------------------------------------------
+    # Load Latest Intelligence
+    # ------------------------------------------------------
+
+    latest_package = load_latest_intelligence(
+        token,
+    )
+
+    # ------------------------------------------------------
+    # Knowledge Gate
+    # ------------------------------------------------------
+
+    should_persist = should_store(
+
+        intelligence_package,
+
+        latest_package,
+
+    )
+
+    return {
+
+        "intelligence_package":
+            intelligence_package,
+
+        "latest_package":
+            latest_package,
+
+        "should_persist":
+            should_persist,
+
+    }
+
+# ==========================================================
+# SECTION D
+# Lifecycle Builder
+# ==========================================================
+
+def _build_lifecycle(
+    *,
+    decision,
+    event: dict,
+) -> dict:
+    """
+    Build the complete Lifecycle Package.
+
+    Responsibilities
+    ----------------
+    - Build MarketSnapshot
+    - Execute Lifecycle Engine
+
+    Returns
+    -------
+    dict
+
+        lifecycle_package
+    """
+
+    # ------------------------------------------------------
+    # Market Snapshot
+    # ------------------------------------------------------
+
+    market_snapshot = build_market_snapshot(
+        event,
+    )
+
+    # ------------------------------------------------------
+    # Lifecycle Engine
+    # ------------------------------------------------------
+
+    lifecycle_package = build_lifecycle(
+
+        decision=
+            decision,
+
+        market_snapshot=
+            market_snapshot,
+
+        observation_window=
+            DEFAULT_OBSERVATION_WINDOW,
+
+    )
+
+    return {
+
+        "market_snapshot":
+            market_snapshot,
+
+        "lifecycle_package":
+            lifecycle_package,
+
+    }
+
+# ==========================================================
+# SECTION E
+# Intelligence Persistence
+# ==========================================================
+
+def _persist_intelligence(
+    intelligence_package: dict,
+) -> bool:
+    """
+    Persist Intelligence Package.
+
+    Responsibilities
+    ----------------
+    - Serialize Intelligence Package
+    - Build Knowledge Fingerprint
+    - Persist Intelligence
+
+    Returns
+    -------
+    bool
+    """
+
+    # ------------------------------------------------------
+    # Serialize
+    # ------------------------------------------------------
+
+    serialized_package = serialize_package(
+        intelligence_package,
+    )
+
+    # ------------------------------------------------------
+    # Fingerprint
+    # ------------------------------------------------------
+
+    fingerprint = build_knowledge_fingerprint(
+        intelligence_package,
+    )
+
+    # ------------------------------------------------------
+    # Payload
+    # ------------------------------------------------------
+
+    payload = {
+
+        "token":
+            serialized_package["token"],
+
+        "decision":
+            serialized_package[
+                "decision"
+            ][
+                "recommended_action"
+            ],
+
+        "confidence":
+            serialized_package[
+                "decision"
+            ][
+                "confidence"
+            ],
+
+        "knowledge_fingerprint":
+            fingerprint,
+
+        "intelligence_package":
+            serialized_package,
+
+    }
+
+    # ------------------------------------------------------
+    # Persist
+    # ------------------------------------------------------
+
+    save_intelligence(
+        payload,
+    )
+
+    return True
+
+# ==========================================================
+# SECTION F
+# Lifecycle Persistence
+# ==========================================================
+
+def _persist_lifecycle(
+    lifecycle_package: dict,
+) -> bool:
+    """
+    Persist the complete Lifecycle Package.
+
+    Responsibilities
+    ----------------
+    - Persist Outcome
+    - Persist Learning
+    - Persist Knowledge
+
+    Returns
+    -------
+    bool
+    """
+
+    # ------------------------------------------------------
+    # Extract Artifacts
+    # ------------------------------------------------------
+
+    outcome = lifecycle_package[
+        "outcome"
+    ]
+
+    learning = lifecycle_package[
+        "learning"
+    ]
+
+    knowledge = lifecycle_package[
+        "knowledge"
+    ]
+
+    # ------------------------------------------------------
+    # Outcome
+    # ------------------------------------------------------
+
+    outcome_payload = serialize_outcome(
+        outcome,
+    )
+
+    save_outcome(
+        outcome_payload,
+    )
+
+    # ------------------------------------------------------
+    # Learning
+    # ------------------------------------------------------
+
+    learning_payload = serialize_learning(
+        learning,
+    )
+
+    save_learning(
+        learning_payload,
+    )
+
+    # ------------------------------------------------------
+    # Knowledge
+    # ------------------------------------------------------
+
+    knowledge_payload = serialize_knowledge(
+        knowledge,
+    )
+
+    save_knowledge(
+        knowledge_payload,
+    )
+
+    return True
+
+# ==========================================================
+# SECTION G
+# Finish Helpers
+# ==========================================================
+
+def _finish_success(
+    *,
+    job,
+    token: str,
+    event: dict,
+    intelligence_package: dict,
+    lifecycle_package: dict,
+    knowledge_persisted: bool,
+) -> dict:
+    """
+    Finish a successful scan.
+    """
+
+    duration = finish_job(
+
+        job,
+
+        "SUCCESS",
+
+    )
+
+    return {
+
+        "success":
+            True,
+
+        "job_status":
+            "SUCCESS",
+
+        "token":
+            token,
+
+        "duration_ms":
+            duration,
+
+        # Infrastructure
+
+        "event":
+            event,
+
+        # Intelligence
+
+        "intelligence_package":
+            intelligence_package,
+
+        "knowledge_saved":
+            knowledge_persisted,
+
+        # Lifecycle
+
+        "lifecycle_package":
+            lifecycle_package,
+
+        # Backward Compatibility
+
+        "observation":
+            intelligence_package[
+                "observation"
+            ],
+
+        "signals":
+            intelligence_package[
+                "signals"
+            ],
+
+        "interpretations":
+            intelligence_package[
+                "interpretations"
+            ],
+
+        "decision":
+            intelligence_package[
+                "decision"
+            ],
+
+    }
+
+
+def _finish_failure(
+    *,
+    job,
+    token: str,
+    error: Exception,
+) -> dict:
+    """
+    Finish a failed scan.
+    """
+
+    print(
+        "\n❌ AlphaRadar Exception"
+    )
+
+    traceback.print_exc()
 
     try:
 
-        # ---------------------------------------
-        # Step 1 : Scan DexScreener
-        # ---------------------------------------
+        finish_job(
 
-        data = search_token(token)
+            job,
 
-        # ---------------------------------------
-        # Step 2 : Select Best Pair
-        # ---------------------------------------
+            "FAILED",
 
-        pairs = data.get("pairs", [])
+            str(error),
 
-        selected_pair = select_best_pair(pairs)
+        )
 
-        if selected_pair is None:
+    except Exception:
 
-            finish_job(
-                job,
-                "FAILED",
-                "No valid pair found",
-            )
+        print(
+            "\n⚠️ Pulse Update Failed"
+        )
 
-            return {
-                "success": False,
-                "job_status": "FAILED",
-                "token": token,
-                "error": "No valid pair found",
-            }
+        traceback.print_exc()
 
-        # ---------------------------------------
-        # Step 3 : Normalize
-        # ---------------------------------------
+    return {
 
-        event = normalize_pair(selected_pair)
+        "success":
+            False,
 
-        # ---------------------------------------
-        # Step 4 : Save Market Event
-        # ---------------------------------------
+        "job_status":
+            "FAILED",
 
-        save_market_event(event)
+        "token":
+            token,
 
-        # ---------------------------------------
-        # Step 5 : Observation
-        # ---------------------------------------
+        "error":
+            str(error),
 
-        observation = build_observation(token)
+    }
 
-        if observation is None:
+# ==========================================================
+# SECTION H
+# Production Runner
+# ==========================================================
+
+def run_scan(
+    token: str,
+) -> dict:
+    """
+    Run a complete AlphaRadar Production Scan.
+    """
+
+    job = start_job(
+        token,
+    )
+
+    try:
+
+        # --------------------------------------------------
+        # Market
+        # --------------------------------------------------
+
+        market = _scan_market(
+            token,
+        )
+
+        #
+        # First Scan
+        #
+
+        if market.get(
+            "first_scan",
+            False,
+        ):
 
             duration = finish_job(
+
                 job,
+
                 "SUCCESS",
+
             )
 
             return {
-                "success": True,
-                "job_status": "SUCCESS",
-                "token": token,
-                "duration_ms": duration,
-                "event": event,
-                "message": (
-                    "First market event recorded. "
-                    "Waiting for next scan."
-                ),
+
+                "success":
+                    True,
+
+                "job_status":
+                    "SUCCESS",
+
+                "token":
+                    token,
+
+                "duration_ms":
+                    duration,
+
+                "event":
+                    market["event"],
+
+                "message":
+                    (
+                        "First market event recorded. "
+                        "Waiting for next scan."
+                    ),
+
             }
 
-        # ---------------------------------------
-        # Step 6 : Intelligence Engine
-        # ---------------------------------------
+        event = market[
+            "event"
+        ]
 
-        intelligence_package = build_intelligence(
-            token,
-            observation,
+        observation = market[
+            "observation"
+        ]
+
+        # --------------------------------------------------
+        # Intelligence
+        # --------------------------------------------------
+
+        intelligence = _build_intelligence(
+
+            token=
+                token,
+
+            observation=
+                observation,
+
         )
 
-        # ---------------------------------------
-        # Step 7 : Knowledge Gate
-        # ---------------------------------------
+        intelligence_package = intelligence[
+            "intelligence_package"
+        ]
 
-        latest_package = load_latest_intelligence(
-            token,
-        )
+        should_persist = intelligence[
+            "should_persist"
+        ]
 
         knowledge_saved = False
 
-        if should_store(
-            intelligence_package,
-            latest_package,
-        ):
+        if should_persist:
 
-            save_intelligence(
+            _persist_intelligence(
                 intelligence_package,
             )
 
             knowledge_saved = True
 
-        # ---------------------------------------
-        # Step 8 : Finish
-        # ---------------------------------------
+        # --------------------------------------------------
+        # Lifecycle
+        # --------------------------------------------------
 
-        duration = finish_job(
-            job,
-            "SUCCESS",
+        lifecycle = _build_lifecycle(
+
+            decision=
+                intelligence_package[
+                    "decision"
+                ],
+
+            event=
+                event,
+
         )
 
-        # ---------------------------------------
-        # Step 9 : Return
-        # ---------------------------------------
+        lifecycle_package = lifecycle[
+            "lifecycle_package"
+        ]
 
-        return {
+        _persist_lifecycle(
 
-            "success": True,
+            lifecycle_package,
 
-            "job_status": "SUCCESS",
+        )
 
-            "token": token,
+        # --------------------------------------------------
+        # Finish
+        # --------------------------------------------------
 
-            "duration_ms": duration,
+        return _finish_success(
 
-            "event": event,
-
-            "intelligence_package": intelligence_package,
-
-            "knowledge_saved": knowledge_saved,
-
-            # Backward compatibility
-
-            "observation":
-                intelligence_package["observation"],
-
-            "signals":
-                intelligence_package["signals"],
-
-            "interpretations":
-                intelligence_package["interpretations"],
-
-            "decision":
-                intelligence_package["decision"],
-
-        }
-
-    except Exception as e:
-
-        print("\n❌ AlphaRadar Exception")
-        traceback.print_exc()
-
-        try:
-
-            finish_job(
+            job=
                 job,
-                "FAILED",
-                str(e),
-            )
 
-        except Exception as pulse_error:
+            token=
+                token,
 
-            print("\n⚠️ Pulse Update Failed")
-            traceback.print_exc()
+            event=
+                event,
 
-        return {
+            intelligence_package=
+                intelligence_package,
 
-            "success": False,
+            lifecycle_package=
+                lifecycle_package,
 
-            "job_status": "FAILED",
+            knowledge_persisted=
+                knowledge_saved,
 
-            "token": token,
+        )
 
-            "error": str(e),
+    except Exception as error:
 
-        }
+        return _finish_failure(
+
+            job=
+                job,
+
+            token=
+                token,
+
+            error=
+                error,
+
+        )
