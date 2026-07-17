@@ -1,20 +1,19 @@
 """
-AlphaRadar Intelligence Store
+AlphaRadar Learning Store
 
-Persist and retrieve serialized Intelligence Packages.
+Persist and retrieve Learning Artifacts.
 
 Responsibilities
 ----------------
-- Save serialized Intelligence Packages
-- Load latest stored Intelligence Package
+- Save LearningArtifact
+- Load latest LearningArtifact
+- Contain no business logic
+- Contain no DTO mapping
 
 This module does NOT:
-- serialize artifacts
-- deserialize artifacts
-- build fingerprints
-- detect signals
-- interpret markets
-- make decisions
+- deserialize objects
+- build Product payloads
+- evaluate learning
 """
 
 from scanner.database import supabase
@@ -24,11 +23,11 @@ from scanner.database import supabase
 # Save
 # ==========================================================
 
-def save_intelligence(
+def save_learning(
     payload: dict,
 ) -> None:
     """
-    Persist a serialized Intelligence Package.
+    Persist a serialized LearningArtifact.
 
     Parameters
     ----------
@@ -38,7 +37,7 @@ def save_intelligence(
     (
         supabase
 
-        .table("intelligence_events")
+        .table("learning_events")
 
         .insert(payload)
 
@@ -50,11 +49,11 @@ def save_intelligence(
 # Load
 # ==========================================================
 
-def load_latest_intelligence(
+def load_latest_learning(
     token: str,
 ) -> dict | None:
     """
-    Load the latest serialized Intelligence Package.
+    Load the latest LearningArtifact.
 
     Parameters
     ----------
@@ -69,9 +68,9 @@ def load_latest_intelligence(
 
         supabase
 
-        .table("intelligence_events")
+        .table("learning_events")
 
-        .select("intelligence_package")
+        .select("*")
 
         .eq(
             "token",
@@ -93,6 +92,4 @@ def load_latest_intelligence(
 
         return None
 
-    return response.data[0][
-        "intelligence_package"
-    ]
+    return response.data[0]

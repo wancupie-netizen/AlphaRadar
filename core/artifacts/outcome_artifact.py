@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from core.artifacts.decision_artifact import DecisionArtifact
@@ -35,6 +36,10 @@ class OutcomeArtifact:
         default_factory=lambda: f"OUT-{uuid4().hex[:12].upper()}"
     )
 
+    created_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
+
     @classmethod
     def from_decision(
         cls,
@@ -49,8 +54,13 @@ class OutcomeArtifact:
         """
 
         return cls(
+
             decision_artifact_id=decision.artifact_id,
+
             observation_window=observation_window,
+
             market_snapshot=market_snapshot,
+
             snapshot_status=snapshot_status,
+
         )

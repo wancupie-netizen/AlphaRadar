@@ -138,9 +138,19 @@ class LearningDTO:
 @dataclass(slots=True)
 class KnowledgeDTO:
 
-    learning_status: str
+    token: str
+
+    knowledge_fingerprint: str
+
+    sample_size: int
+
+    success_rate: float
+
+    confidence: str
 
     summary: str
+
+    artifact_id: str
 
     created_at: str
 

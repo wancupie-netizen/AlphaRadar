@@ -30,6 +30,7 @@ from application.dto.token_detail_dto import (
 from core.artifacts.decision_artifact import DecisionArtifact
 from core.artifacts.outcome_artifact import OutcomeArtifact
 from core.artifacts.learning_artifact import LearningArtifact
+from core.artifacts.knowledge_artifact import KnowledgeArtifact
 
 
 def _iso(value) -> str:
@@ -61,7 +62,7 @@ def build_token_detail(
 
     learning: LearningArtifact | None,
 
-    knowledge: list,
+    knowledge: list[KnowledgeArtifact],
 
 ) -> TokenDetailDTO:
 
@@ -230,23 +231,30 @@ def build_token_detail(
 
         )
 
+    # --------------------------------------------------
+    # Knowledge
+    # --------------------------------------------------
+
     knowledge_dto = [
 
         KnowledgeDTO(
 
-            learning_status=item.get(
-                "learning_status",
-                ""
-            ),
+            token=item.token,
 
-            summary=item.get(
-                "summary",
-                ""
-            ),
+            knowledge_fingerprint=item.knowledge_fingerprint,
 
-            created_at=item.get(
-                "created_at",
-                ""
+            sample_size=item.sample_size,
+
+            success_rate=item.success_rate,
+
+            confidence=item.confidence,
+
+            summary=item.summary,
+
+            artifact_id=item.artifact_id,
+
+            created_at=_iso(
+                item.created_at
             ),
 
         )

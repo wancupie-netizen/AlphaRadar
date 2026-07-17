@@ -56,6 +56,8 @@ class LearningArtifact:
     Learning Engine never modifies the incoming OutcomeArtifact.
     """
 
+    token: str
+
     outcome_artifact_id: str
 
     learning_status: str
@@ -90,6 +92,8 @@ class LearningArtifact:
         """
 
         return cls(
+
+            token=outcome.market_snapshot.symbol,
 
             outcome_artifact_id=outcome.artifact_id,
 

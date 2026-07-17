@@ -1,20 +1,19 @@
 """
-AlphaRadar Intelligence Store
+AlphaRadar Outcome Store
 
-Persist and retrieve serialized Intelligence Packages.
+Persist and retrieve Outcome Artifacts.
 
 Responsibilities
 ----------------
-- Save serialized Intelligence Packages
-- Load latest stored Intelligence Package
+- Save OutcomeArtifact
+- Load latest OutcomeArtifact
+- Contain no business logic
+- Contain no DTO mapping
 
 This module does NOT:
-- serialize artifacts
-- deserialize artifacts
-- build fingerprints
-- detect signals
-- interpret markets
-- make decisions
+- deserialize objects
+- build Product payloads
+- evaluate outcomes
 """
 
 from scanner.database import supabase
@@ -24,11 +23,11 @@ from scanner.database import supabase
 # Save
 # ==========================================================
 
-def save_intelligence(
+def save_outcome(
     payload: dict,
 ) -> None:
     """
-    Persist a serialized Intelligence Package.
+    Persist a serialized OutcomeArtifact.
 
     Parameters
     ----------
@@ -38,7 +37,7 @@ def save_intelligence(
     (
         supabase
 
-        .table("intelligence_events")
+        .table("outcome_events")
 
         .insert(payload)
 
@@ -50,11 +49,11 @@ def save_intelligence(
 # Load
 # ==========================================================
 
-def load_latest_intelligence(
+def load_latest_outcome(
     token: str,
 ) -> dict | None:
     """
-    Load the latest serialized Intelligence Package.
+    Load the latest OutcomeArtifact.
 
     Parameters
     ----------
@@ -69,9 +68,9 @@ def load_latest_intelligence(
 
         supabase
 
-        .table("intelligence_events")
+        .table("outcome_events")
 
-        .select("intelligence_package")
+        .select("*")
 
         .eq(
             "token",
@@ -93,6 +92,4 @@ def load_latest_intelligence(
 
         return None
 
-    return response.data[0][
-        "intelligence_package"
-    ]
+    return response.data[0]
