@@ -731,6 +731,22 @@ def run_scan(
 ) -> dict:
     """
     Run a complete AlphaRadar Production Scan.
+
+    Flow
+    ----
+    Market
+        ↓
+    Intelligence
+        ↓
+    Knowledge Fingerprint
+        ↓
+    Intelligence Persistence
+        ↓
+    Adaptive Dashboard
+        ↓
+    Lifecycle
+        ↓
+    Production Result
     """
 
     job = start_job(
@@ -747,9 +763,9 @@ def run_scan(
             token,
         )
 
-        #
+        # --------------------------------------------------
         # First Scan
-        #
+        # --------------------------------------------------
 
         if market.get(
             "first_scan",
@@ -757,11 +773,8 @@ def run_scan(
         ):
 
             duration = finish_job(
-
                 job,
-
                 "SUCCESS",
-
             )
 
             return {
@@ -819,15 +832,58 @@ def run_scan(
             "should_persist"
         ]
 
+        decision = intelligence_package[
+            "decision"
+        ]
+
+        # --------------------------------------------------
+        # Knowledge Fingerprint
+        # --------------------------------------------------
+
+        knowledge_fingerprint = build_knowledge_fingerprint(
+            intelligence_package,
+        )
+
+        # --------------------------------------------------
+        # Intelligence Persistence
+        # --------------------------------------------------
+
         knowledge_saved = False
 
         if should_persist:
 
             _persist_intelligence(
+
                 intelligence_package,
+                knowledge_fingerprint,
+
             )
 
             knowledge_saved = True
+
+        # --------------------------------------------------
+        # Adaptive Dashboard
+        # --------------------------------------------------
+
+        dashboard_request = build_dashboard_request(
+
+            token=
+                token,
+
+            decision=
+                decision,
+
+            knowledge_fingerprint=
+                knowledge_fingerprint,
+
+            last_updated=
+                decision.metadata.timestamp,
+
+        )
+
+        dashboard = build_adaptive_dashboard(
+            dashboard_request,
+        )
 
         # --------------------------------------------------
         # Lifecycle
@@ -836,9 +892,7 @@ def run_scan(
         lifecycle = _build_lifecycle(
 
             decision=
-                intelligence_package[
-                    "decision"
-                ],
+                decision,
 
             event=
                 event,
@@ -850,9 +904,7 @@ def run_scan(
         ]
 
         _persist_lifecycle(
-
             lifecycle_package,
-
         )
 
         # --------------------------------------------------
@@ -875,6 +927,9 @@ def run_scan(
 
             lifecycle_package=
                 lifecycle_package,
+
+            dashboard=
+                dashboard,
 
             knowledge_persisted=
                 knowledge_saved,

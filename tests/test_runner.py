@@ -1,106 +1,454 @@
 """
-Tests for AlphaRadar Runner.
+Tests for AlphaRadar Production Runner.
+
+Responsibilities
+----------------
+- Verify production orchestration
+- Verify fingerprint ownership
+- Verify Dashboard integration
+- Verify Lifecycle integration
+- Verify successful production result
 """
 
-from unittest.mock import patch
+from datetime import datetime, timezone
+from unittest.mock import Mock, patch
 
 from scanner.runner import run_scan
 
 
-@patch("scanner.runner.finish_job")
+# ==========================================================
+# Successful Production Scan
+# ==========================================================
+
+@patch("scanner.runner._finish_success")
+@patch("scanner.runner._persist_lifecycle")
+@patch("scanner.runner._build_lifecycle")
+@patch("scanner.runner.build_adaptive_dashboard")
+@patch("scanner.runner.build_dashboard_request")
+@patch("scanner.runner._persist_intelligence")
+@patch("scanner.runner.build_knowledge_fingerprint")
+@patch("scanner.runner._build_intelligence")
+@patch("scanner.runner._scan_market")
 @patch("scanner.runner.start_job")
-@patch("scanner.runner.load_latest_intelligence")
-@patch("scanner.runner.save_intelligence")
-@patch("scanner.runner.should_store")
-@patch("scanner.runner.build_intelligence")
-@patch("scanner.runner.build_observation")
-@patch("scanner.runner.save_market_event")
-@patch("scanner.runner.normalize_pair")
-@patch("scanner.runner.select_best_pair")
-@patch("scanner.runner.search_token")
 def test_should_complete_successful_scan(
-
-    mock_search,
-    mock_select_pair,
-    mock_normalize,
-    mock_save_event,
-    mock_build_observation,
-    mock_build_intelligence,
-    mock_should_store,
-    mock_save_intelligence,
-    mock_load_latest,
     mock_start_job,
-    mock_finish_job,
-
+    mock_scan_market,
+    mock_build_intelligence,
+    mock_build_fingerprint,
+    mock_persist_intelligence,
+    mock_build_dashboard_request,
+    mock_build_adaptive_dashboard,
+    mock_build_lifecycle,
+    mock_persist_lifecycle,
+    mock_finish_success,
 ):
+    """
+    Runner should orchestrate the complete production flow.
+    """
 
-    mock_start_job.return_value = "JOB"
+    timestamp = datetime.now(
+        timezone.utc,
+    )
 
-    mock_finish_job.return_value = 123
+    decision = Mock()
 
-    mock_search.return_value = {
-        "pairs": [
-            {
-                "pairAddress": "ABC"
-            }
-        ]
-    }
-
-    mock_select_pair.return_value = {
-        "pairAddress": "ABC"
-    }
+    decision.metadata.timestamp = timestamp
 
     event = {
-        "token": "BTC"
+        "token": "BTC",
     }
 
     observation = {
-        "token": "BTC"
-    }
-
-    package = {
         "token": "BTC",
-        "observation": observation,
-        "signals": [],
-        "interpretations": [],
-        "decision": {},
     }
 
-    mock_normalize.return_value = event
-    mock_build_observation.return_value = observation
-    mock_build_intelligence.return_value = package
+    intelligence_package = {
 
-    mock_load_latest.return_value = None
+        "token":
+            "BTC",
 
-    mock_should_store.return_value = True
+        "observation":
+            observation,
 
-    result = run_scan("BTC")
+        "signals":
+            [],
 
-    assert result["success"] is True
-    assert result["knowledge_saved"] is True
+        "interpretations":
+            [],
 
-    mock_search.assert_called_once_with("BTC")
+        "decision":
+            decision,
 
-    mock_select_pair.assert_called_once()
+    }
 
-    mock_normalize.assert_called_once()
+    lifecycle_package = {
+        "outcome": Mock(),
+        "learning": Mock(),
+        "knowledge": Mock(),
+    }
 
-    mock_save_event.assert_called_once_with(event)
+    dashboard_request = Mock()
+    dashboard = Mock()
+    job = Mock()
 
-    mock_build_observation.assert_called_once_with("BTC")
+    expected_result = {
+
+        "success":
+            True,
+
+        "job_status":
+            "SUCCESS",
+
+        "token":
+            "BTC",
+
+        "dashboard":
+            dashboard,
+
+    }
+
+    mock_start_job.return_value = job
+
+    mock_scan_market.return_value = {
+
+        "event":
+            event,
+
+        "observation":
+            observation,
+
+        "first_scan":
+            False,
+
+    }
+
+    mock_build_intelligence.return_value = {
+
+        "intelligence_package":
+            intelligence_package,
+
+        "latest_package":
+            None,
+
+        "should_persist":
+            True,
+
+    }
+
+    mock_build_fingerprint.return_value = (
+        "KNOWLEDGE-FINGERPRINT"
+    )
+
+    mock_build_dashboard_request.return_value = (
+        dashboard_request
+    )
+
+    mock_build_adaptive_dashboard.return_value = dashboard
+
+    mock_build_lifecycle.return_value = {
+
+        "market_snapshot":
+            Mock(),
+
+        "lifecycle_package":
+            lifecycle_package,
+
+    }
+
+    mock_finish_success.return_value = expected_result
+
+    result = run_scan(
+        "BTC",
+    )
+
+    assert result == expected_result
+
+    mock_start_job.assert_called_once_with(
+        "BTC",
+    )
+
+    mock_scan_market.assert_called_once_with(
+        "BTC",
+    )
 
     mock_build_intelligence.assert_called_once_with(
-        "BTC",
-        observation,
+
+        token=
+            "BTC",
+
+        observation=
+            observation,
+
     )
 
-    mock_should_store.assert_called_once_with(
-        package,
-        None,
+    mock_build_fingerprint.assert_called_once_with(
+        intelligence_package,
     )
 
-    mock_save_intelligence.assert_called_once_with(
-        package,
+    mock_persist_intelligence.assert_called_once_with(
+
+        intelligence_package,
+        "KNOWLEDGE-FINGERPRINT",
+
     )
 
-    mock_finish_job.assert_called()
+    mock_build_dashboard_request.assert_called_once_with(
+
+        token=
+            "BTC",
+
+        decision=
+            decision,
+
+        knowledge_fingerprint=
+            "KNOWLEDGE-FINGERPRINT",
+
+        last_updated=
+            timestamp,
+
+    )
+
+    mock_build_adaptive_dashboard.assert_called_once_with(
+        dashboard_request,
+    )
+
+    mock_build_lifecycle.assert_called_once_with(
+
+        decision=
+            decision,
+
+        event=
+            event,
+
+    )
+
+    mock_persist_lifecycle.assert_called_once_with(
+        lifecycle_package,
+    )
+
+    mock_finish_success.assert_called_once_with(
+
+        job=
+            job,
+
+        token=
+            "BTC",
+
+        event=
+            event,
+
+        intelligence_package=
+            intelligence_package,
+
+        lifecycle_package=
+            lifecycle_package,
+
+        dashboard=
+            dashboard,
+
+        knowledge_persisted=
+            True,
+
+    )
+
+
+# ==========================================================
+# Knowledge Gate Rejection
+# ==========================================================
+
+@patch("scanner.runner._finish_success")
+@patch("scanner.runner._persist_lifecycle")
+@patch("scanner.runner._build_lifecycle")
+@patch("scanner.runner.build_adaptive_dashboard")
+@patch("scanner.runner.build_dashboard_request")
+@patch("scanner.runner._persist_intelligence")
+@patch("scanner.runner.build_knowledge_fingerprint")
+@patch("scanner.runner._build_intelligence")
+@patch("scanner.runner._scan_market")
+@patch("scanner.runner.start_job")
+def test_should_build_dashboard_when_knowledge_is_not_persisted(
+    mock_start_job,
+    mock_scan_market,
+    mock_build_intelligence,
+    mock_build_fingerprint,
+    mock_persist_intelligence,
+    mock_build_dashboard_request,
+    mock_build_adaptive_dashboard,
+    mock_build_lifecycle,
+    mock_persist_lifecycle,
+    mock_finish_success,
+):
+    """
+    Dashboard must still be built when the Knowledge Gate
+    rejects Intelligence persistence.
+    """
+
+    timestamp = datetime.now(
+        timezone.utc,
+    )
+
+    decision = Mock()
+    decision.metadata.timestamp = timestamp
+
+    intelligence_package = {
+
+        "token":
+            "ETH",
+
+        "observation":
+            {},
+
+        "signals":
+            [],
+
+        "interpretations":
+            [],
+
+        "decision":
+            decision,
+
+    }
+
+    lifecycle_package = {
+        "outcome": Mock(),
+        "learning": Mock(),
+        "knowledge": Mock(),
+    }
+
+    mock_start_job.return_value = Mock()
+
+    mock_scan_market.return_value = {
+
+        "event":
+            {"token": "ETH"},
+
+        "observation":
+            {},
+
+        "first_scan":
+            False,
+
+    }
+
+    mock_build_intelligence.return_value = {
+
+        "intelligence_package":
+            intelligence_package,
+
+        "latest_package":
+            None,
+
+        "should_persist":
+            False,
+
+    }
+
+    mock_build_fingerprint.return_value = "ETH-FINGERPRINT"
+
+    mock_build_dashboard_request.return_value = Mock()
+
+    mock_build_adaptive_dashboard.return_value = Mock()
+
+    mock_build_lifecycle.return_value = {
+
+        "market_snapshot":
+            Mock(),
+
+        "lifecycle_package":
+            lifecycle_package,
+
+    }
+
+    mock_finish_success.return_value = {
+        "success": True,
+    }
+
+    result = run_scan(
+        "ETH",
+    )
+
+    assert result["success"] is True
+
+    mock_persist_intelligence.assert_not_called()
+
+    mock_build_dashboard_request.assert_called_once()
+
+    mock_build_adaptive_dashboard.assert_called_once()
+
+    mock_persist_lifecycle.assert_called_once_with(
+        lifecycle_package,
+    )
+
+
+# ==========================================================
+# First Scan
+# ==========================================================
+
+@patch("scanner.runner.finish_job")
+@patch("scanner.runner._scan_market")
+@patch("scanner.runner.start_job")
+def test_should_stop_after_first_market_scan(
+    mock_start_job,
+    mock_scan_market,
+    mock_finish_job,
+):
+    """
+    First scan should only persist the first market event.
+    """
+
+    job = Mock()
+
+    event = {
+        "token": "SOL",
+    }
+
+    mock_start_job.return_value = job
+
+    mock_scan_market.return_value = {
+
+        "event":
+            event,
+
+        "observation":
+            None,
+
+        "first_scan":
+            True,
+
+    }
+
+    mock_finish_job.return_value = 25
+
+    result = run_scan(
+        "SOL",
+    )
+
+    assert result == {
+
+        "success":
+            True,
+
+        "job_status":
+            "SUCCESS",
+
+        "token":
+            "SOL",
+
+        "duration_ms":
+            25,
+
+        "event":
+            event,
+
+        "message":
+            (
+                "First market event recorded. "
+                "Waiting for next scan."
+            ),
+
+    }
+
+    mock_finish_job.assert_called_once_with(
+        job,
+        "SUCCESS",
+    )
