@@ -9,6 +9,10 @@ from adaptive.compiler.experience_compiler import (
     compile_experience,
 )
 
+from adaptive.dashboard.dashboard_request_builder import (
+    build_dashboard_request,
+)
+
 from adaptive.history.history_repository import (
     clear,
     save,
@@ -18,20 +22,11 @@ from application.adaptive_dashboard_service import (
     build_adaptive_dashboard,
 )
 
-from scanner.knowledge_fingerprint import (
-    build_knowledge_fingerprint,
-)
-
-from scanner.decision_types import (
-    DecisionType,
-)
-
-from scanner.signal_types import (
-    SignalType,
-)
-
-from scanner.interpretation_types import (
-    InterpretationType,
+from core.artifacts.decision_artifact import (
+    DecisionArtifact,
+    DecisionContext,
+    DecisionMetadata,
+    Reason,
 )
 
 
@@ -42,7 +37,7 @@ print("Adaptive Dashboard Service Test")
 print("=" * 60)
 
 # --------------------------------------------------
-# Clear Repository
+# Repository
 # --------------------------------------------------
 
 clear()
@@ -53,79 +48,67 @@ print("Repository Cleared")
 print("-" * 60)
 
 # --------------------------------------------------
-# Intelligence Package
+# Decision Artifact
 # --------------------------------------------------
 
-intelligence_package = {
+decision = DecisionArtifact(
 
-    "observation": {
+    recommended_action="WATCH",
 
-        "observation_types": [
+    confidence="HIGH",
 
-            "PRICE_BREAKOUT",
+    summary="Bullish momentum detected.",
 
-            "HIGH_VOLUME",
+    context=DecisionContext(),
 
-        ],
+    reasons=(
 
-    },
+        Reason(
 
-    "signals": [
+            title="ACCUMULATION",
 
-        SignalType.PRICE_UP,
+        ),
 
-        SignalType.VOLUME_UP,
+        Reason(
 
-        SignalType.LIQUIDITY_UP,
+            title="STRONG_LIQUIDITY",
 
-    ],
+        ),
 
-    "interpretations": [
+    ),
 
-        InterpretationType.ACCUMULATION,
+    metadata=DecisionMetadata(
 
-        InterpretationType.STRONG_LIQUIDITY,
+        engine_version="1.0.0",
 
-    ],
+        symbol="BTC",
 
-    "decision": DecisionType.WATCH,
+        pair="BTC",
 
-    "confidence": "HIGH",
+    ),
 
-    "summary": "Bullish momentum detected.",
-
-}
+)
 
 print()
 
-print("Intelligence Package")
+print("Decision Artifact")
 print("-" * 60)
 
 pprint(
-    intelligence_package,
+    decision,
 )
 
 # --------------------------------------------------
-# Build Knowledge Fingerprint
+# Knowledge Fingerprint
 # --------------------------------------------------
 
-fingerprint = build_knowledge_fingerprint(
-
-    intelligence_package,
-
-)
-
-print()
-
-print("Knowledge Fingerprint")
-print("-" * 60)
-
-print(
-    fingerprint,
+fingerprint = (
+    "7d87405ce3b3c54af804cc25cb31e3b3"
+    "e091d33f77783df3cb4a06c888abaa99"
 )
 
 # --------------------------------------------------
-# Build Experiences
+# Historical Experiences
 # --------------------------------------------------
 
 experience_1 = compile_experience(
@@ -204,18 +187,39 @@ save(
 )
 
 # --------------------------------------------------
-# Build Dashboard
+# Dashboard Request
 # --------------------------------------------------
 
-dashboard = build_adaptive_dashboard(
+request = build_dashboard_request(
 
     token="BTC",
 
-    intelligence_package=intelligence_package,
+    decision=decision,
+
+    knowledge_fingerprint=fingerprint,
 
     last_updated=datetime.now(
         timezone.utc,
     ),
+
+)
+
+print()
+
+print("Dashboard Request")
+print("-" * 60)
+
+pprint(
+    request,
+)
+
+# --------------------------------------------------
+# Dashboard Card
+# --------------------------------------------------
+
+dashboard = build_adaptive_dashboard(
+
+    request,
 
 )
 
@@ -240,10 +244,6 @@ assert dashboard.decision == "WATCH"
 
 assert dashboard.confidence == "HIGH"
 
-assert dashboard.seen_before is True
-
-assert dashboard.historical_success == 66.67
-
 assert dashboard.summary == "Bullish momentum detected."
 
 assert dashboard.reasons == [
@@ -253,6 +253,10 @@ assert dashboard.reasons == [
     "STRONG_LIQUIDITY",
 
 ]
+
+assert dashboard.seen_before is True
+
+assert dashboard.historical_success == 66.67
 
 assert dashboard.metadata.engine_version == "1.0.0"
 

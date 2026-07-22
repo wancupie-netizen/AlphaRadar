@@ -8,6 +8,7 @@ Responsibilities
 - Coordinate complete scan lifecycle
 - Orchestrate Intelligence Engine
 - Orchestrate Lifecycle Engine
+- Orchestrate Dashboard Engine
 - Persist Intelligence
 - Persist Lifecycle
 - Return Production Result
@@ -75,6 +76,18 @@ from scanner.knowledge_gate import (
 
 from scanner.knowledge_fingerprint import (
     build_knowledge_fingerprint,
+)
+
+# ==========================================================
+# Dashboard
+# ==========================================================
+
+from adaptive.dashboard.dashboard_request_builder import (
+    build_dashboard_request,
+)
+
+from application.adaptive_dashboard_service import (
+    build_adaptive_dashboard,
 )
 
 # ==========================================================
@@ -403,6 +416,7 @@ def _build_lifecycle(
 
 def _persist_intelligence(
     intelligence_package: dict,
+    knowledge_fingerprint: str,
 ) -> bool:
     """
     Persist Intelligence Package.
@@ -410,8 +424,15 @@ def _persist_intelligence(
     Responsibilities
     ----------------
     - Serialize Intelligence Package
-    - Build Knowledge Fingerprint
     - Persist Intelligence
+
+    Parameters
+    ----------
+    intelligence_package
+        Complete Intelligence Package.
+
+    knowledge_fingerprint
+        Precomputed Knowledge Fingerprint.
 
     Returns
     -------
@@ -423,15 +444,9 @@ def _persist_intelligence(
     # ------------------------------------------------------
 
     serialized_package = serialize_package(
-        intelligence_package,
-    )
 
-    # ------------------------------------------------------
-    # Fingerprint
-    # ------------------------------------------------------
-
-    fingerprint = build_knowledge_fingerprint(
         intelligence_package,
+
     )
 
     # ------------------------------------------------------
@@ -441,7 +456,9 @@ def _persist_intelligence(
     payload = {
 
         "token":
-            serialized_package["token"],
+            serialized_package[
+                "token"
+            ],
 
         "decision":
             serialized_package[
@@ -458,7 +475,7 @@ def _persist_intelligence(
             ],
 
         "knowledge_fingerprint":
-            fingerprint,
+            knowledge_fingerprint,
 
         "intelligence_package":
             serialized_package,
@@ -470,7 +487,9 @@ def _persist_intelligence(
     # ------------------------------------------------------
 
     save_intelligence(
+
         payload,
+
     )
 
     return True
@@ -563,6 +582,7 @@ def _finish_success(
     event: dict,
     intelligence_package: dict,
     lifecycle_package: dict,
+    dashboard,
     knowledge_persisted: bool,
 ) -> dict:
     """
@@ -591,12 +611,16 @@ def _finish_success(
         "duration_ms":
             duration,
 
+        # --------------------------------------------------
         # Infrastructure
+        # --------------------------------------------------
 
         "event":
             event,
 
+        # --------------------------------------------------
         # Intelligence
+        # --------------------------------------------------
 
         "intelligence_package":
             intelligence_package,
@@ -604,12 +628,23 @@ def _finish_success(
         "knowledge_saved":
             knowledge_persisted,
 
+        # --------------------------------------------------
+        # Dashboard
+        # --------------------------------------------------
+
+        "dashboard":
+            dashboard,
+
+        # --------------------------------------------------
         # Lifecycle
+        # --------------------------------------------------
 
         "lifecycle_package":
             lifecycle_package,
 
+        # --------------------------------------------------
         # Backward Compatibility
+        # --------------------------------------------------
 
         "observation":
             intelligence_package[
