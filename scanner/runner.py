@@ -90,6 +90,10 @@ from application.adaptive_dashboard_service import (
     build_adaptive_dashboard,
 )
 
+from application.adaptive_experience_service import (
+    record_adaptive_experience,
+)
+
 # ==========================================================
 # Lifecycle
 # ==========================================================
@@ -746,6 +750,10 @@ def run_scan(
         ↓
     Lifecycle
         ↓
+    Lifecycle Persistence
+        ↓
+    Adaptive Experience
+        ↓
     Production Result
     """
 
@@ -903,8 +911,30 @@ def run_scan(
             "lifecycle_package"
         ]
 
+        # --------------------------------------------------
+        # Lifecycle Persistence
+        # --------------------------------------------------
+
         _persist_lifecycle(
             lifecycle_package,
+        )
+
+        # --------------------------------------------------
+        # Adaptive Experience
+        # --------------------------------------------------
+
+        learning = lifecycle_package[
+            "learning"
+        ]
+
+        record_adaptive_experience(
+
+            knowledge_fingerprint=
+                knowledge_fingerprint,
+
+            learning=
+                learning,
+
         )
 
         # --------------------------------------------------

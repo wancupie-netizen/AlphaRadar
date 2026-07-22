@@ -7,6 +7,7 @@ Responsibilities
 - Verify fingerprint ownership
 - Verify Dashboard integration
 - Verify Lifecycle integration
+- Verify Adaptive Experience integration
 - Verify successful production result
 """
 
@@ -21,6 +22,7 @@ from scanner.runner import run_scan
 # ==========================================================
 
 @patch("scanner.runner._finish_success")
+@patch("scanner.runner.record_adaptive_experience")
 @patch("scanner.runner._persist_lifecycle")
 @patch("scanner.runner._build_lifecycle")
 @patch("scanner.runner.build_adaptive_dashboard")
@@ -40,6 +42,7 @@ def test_should_complete_successful_scan(
     mock_build_adaptive_dashboard,
     mock_build_lifecycle,
     mock_persist_lifecycle,
+    mock_record_adaptive_experience,
     mock_finish_success,
 ):
     """
@@ -51,7 +54,6 @@ def test_should_complete_successful_scan(
     )
 
     decision = Mock()
-
     decision.metadata.timestamp = timestamp
 
     event = {
@@ -61,6 +63,8 @@ def test_should_complete_successful_scan(
     observation = {
         "token": "BTC",
     }
+
+    learning = Mock()
 
     intelligence_package = {
 
@@ -82,9 +86,16 @@ def test_should_complete_successful_scan(
     }
 
     lifecycle_package = {
-        "outcome": Mock(),
-        "learning": Mock(),
-        "knowledge": Mock(),
+
+        "outcome":
+            Mock(),
+
+        "learning":
+            learning,
+
+        "knowledge":
+            Mock(),
+
     }
 
     dashboard_request = Mock()
@@ -226,6 +237,16 @@ def test_should_complete_successful_scan(
         lifecycle_package,
     )
 
+    mock_record_adaptive_experience.assert_called_once_with(
+
+        knowledge_fingerprint=
+            "KNOWLEDGE-FINGERPRINT",
+
+        learning=
+            learning,
+
+    )
+
     mock_finish_success.assert_called_once_with(
 
         job=
@@ -257,6 +278,7 @@ def test_should_complete_successful_scan(
 # ==========================================================
 
 @patch("scanner.runner._finish_success")
+@patch("scanner.runner.record_adaptive_experience")
 @patch("scanner.runner._persist_lifecycle")
 @patch("scanner.runner._build_lifecycle")
 @patch("scanner.runner.build_adaptive_dashboard")
@@ -276,11 +298,12 @@ def test_should_build_dashboard_when_knowledge_is_not_persisted(
     mock_build_adaptive_dashboard,
     mock_build_lifecycle,
     mock_persist_lifecycle,
+    mock_record_adaptive_experience,
     mock_finish_success,
 ):
     """
-    Dashboard must still be built when the Knowledge Gate
-    rejects Intelligence persistence.
+    Dashboard and Adaptive Experience must still be built when
+    the Knowledge Gate rejects Intelligence persistence.
     """
 
     timestamp = datetime.now(
@@ -289,6 +312,8 @@ def test_should_build_dashboard_when_knowledge_is_not_persisted(
 
     decision = Mock()
     decision.metadata.timestamp = timestamp
+
+    learning = Mock()
 
     intelligence_package = {
 
@@ -310,9 +335,16 @@ def test_should_build_dashboard_when_knowledge_is_not_persisted(
     }
 
     lifecycle_package = {
-        "outcome": Mock(),
-        "learning": Mock(),
-        "knowledge": Mock(),
+
+        "outcome":
+            Mock(),
+
+        "learning":
+            learning,
+
+        "knowledge":
+            Mock(),
+
     }
 
     mock_start_job.return_value = Mock()
@@ -320,7 +352,9 @@ def test_should_build_dashboard_when_knowledge_is_not_persisted(
     mock_scan_market.return_value = {
 
         "event":
-            {"token": "ETH"},
+            {
+                "token": "ETH",
+            },
 
         "observation":
             {},
@@ -343,7 +377,9 @@ def test_should_build_dashboard_when_knowledge_is_not_persisted(
 
     }
 
-    mock_build_fingerprint.return_value = "ETH-FINGERPRINT"
+    mock_build_fingerprint.return_value = (
+        "ETH-FINGERPRINT"
+    )
 
     mock_build_dashboard_request.return_value = Mock()
 
@@ -377,6 +413,16 @@ def test_should_build_dashboard_when_knowledge_is_not_persisted(
 
     mock_persist_lifecycle.assert_called_once_with(
         lifecycle_package,
+    )
+
+    mock_record_adaptive_experience.assert_called_once_with(
+
+        knowledge_fingerprint=
+            "ETH-FINGERPRINT",
+
+        learning=
+            learning,
+
     )
 
 
