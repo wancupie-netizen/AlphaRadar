@@ -1,17 +1,21 @@
 """
-Dashboard Collection Service Engineering Test
+Tests for AlphaRadar Dashboard Collection Service.
+
+Responsibilities
+----------------
+- Verify request delegation
+- Verify collection ordering
+- Verify empty collection behavior
 """
 
-from datetime import datetime, timezone
-from pprint import pprint
+from unittest.mock import Mock, call, patch
 
-from adaptive.compiler.experience_compiler import (
-    compile_experience,
+from adaptive.dashboard.dashboard_card import (
+    DashboardCard,
 )
 
-from adaptive.history.history_repository import (
-    clear,
-    save,
+from adaptive.dashboard.dashboard_request import (
+    DashboardRequest,
 )
 
 from application.dashboard_collection_service import (
@@ -19,215 +23,194 @@ from application.dashboard_collection_service import (
 )
 
 
-print()
+# ==========================================================
+# Multiple Requests
+# ==========================================================
 
-print("=" * 60)
-print("Dashboard Collection Service Test")
-print("=" * 60)
-
-# --------------------------------------------------
-# Clear Repository
-# --------------------------------------------------
-
-clear()
-
-print()
-
-print("Repository Cleared")
-print("-" * 60)
-
-# --------------------------------------------------
-# Build Experiences
-# --------------------------------------------------
-
-experience_1 = compile_experience(
-
-    fingerprint="WATCH|ACCUMULATION",
-
-    success=True,
-
-    timestamp=datetime.now(
-        timezone.utc,
-    ),
-
+@patch(
+    "application.dashboard_collection_service."
+    "build_adaptive_dashboard"
 )
+def test_should_build_dashboard_collection(
+    mock_build_adaptive_dashboard,
+):
+    """
+    Service should build one DashboardCard
+    for every DashboardRequest.
+    """
 
-experience_2 = compile_experience(
-
-    fingerprint="WATCH|ACCUMULATION",
-
-    success=True,
-
-    timestamp=datetime.now(
-        timezone.utc,
-    ),
-
-)
-
-experience_3 = compile_experience(
-
-    fingerprint="WATCH|ACCUMULATION",
-
-    success=False,
-
-    timestamp=datetime.now(
-        timezone.utc,
-    ),
-
-)
-
-save(
-    experience_1,
-)
-
-save(
-    experience_2,
-)
-
-save(
-    experience_3,
-)
-
-print()
-
-print("Historical Experiences")
-print("-" * 60)
-
-pprint(
-    experience_1,
-)
-
-pprint(
-    experience_2,
-)
-
-pprint(
-    experience_3,
-)
-
-# --------------------------------------------------
-# Dashboard Inputs
-# --------------------------------------------------
-
-dashboards = [
-
-    {
-
-        "token":
-            "BTC",
-
-        "fingerprint":
-            "WATCH|ACCUMULATION",
-
-        "decision":
-            "WATCH",
-
-        "confidence":
-            "HIGH",
-
-        "summary":
-            "Bullish momentum detected.",
-
-        "reasons":[
-
-            "ACCUMULATION",
-
-            "STRONG_LIQUIDITY",
-
-        ],
-
-        "last_updated":
-            datetime.now(
-                timezone.utc,
-            ),
-
-    },
-
-    {
-
-        "token":
-            "ETH",
-
-        "fingerprint":
-            "WATCH|ACCUMULATION",
-
-        "decision":
-            "WATCH",
-
-        "confidence":
-            "HIGH",
-
-        "summary":
-            "Bullish momentum detected.",
-
-        "reasons":[
-
-            "ACCUMULATION",
-
-            "STRONG_LIQUIDITY",
-
-        ],
-
-        "last_updated":
-            datetime.now(
-                timezone.utc,
-            ),
-
-    },
-
-]
-
-# --------------------------------------------------
-# Build Collection
-# --------------------------------------------------
-
-cards = build_dashboard_collection(
-
-    dashboards=dashboards,
-
-)
-
-print()
-
-print("Dashboard Cards")
-print("-" * 60)
-
-for card in cards:
-
-    pprint(
-        card,
+    request_btc = Mock(
+        spec=DashboardRequest,
     )
 
-print()
+    request_eth = Mock(
+        spec=DashboardRequest,
+    )
 
-# --------------------------------------------------
-# Assertions
-# --------------------------------------------------
+    card_btc = Mock(
+        spec=DashboardCard,
+    )
 
-assert len(cards) == 2
+    card_eth = Mock(
+        spec=DashboardCard,
+    )
 
-assert cards[0].token == "BTC"
+    mock_build_adaptive_dashboard.side_effect = [
+        card_btc,
+        card_eth,
+    ]
 
-assert cards[1].token == "ETH"
+    result = build_dashboard_collection(
 
-assert cards[0].decision == "WATCH"
+        requests=[
+            request_btc,
+            request_eth,
+        ],
 
-assert cards[1].decision == "WATCH"
+    )
 
-assert cards[0].confidence == "HIGH"
+    assert result == [
+        card_btc,
+        card_eth,
+    ]
 
-assert cards[1].confidence == "HIGH"
+    assert mock_build_adaptive_dashboard.call_count == 2
 
-assert cards[0].historical_success == 66.67
+    assert mock_build_adaptive_dashboard.call_args_list == [
 
-assert cards[1].historical_success == 66.67
+        call(
+            request_btc,
+        ),
 
-assert cards[0].seen_before is True
+        call(
+            request_eth,
+        ),
 
-assert cards[1].seen_before is True
+    ]
 
-assert cards[0].metadata.engine_version == "1.0.0"
 
-assert cards[1].metadata.engine_version == "1.0.0"
+# ==========================================================
+# Ordering
+# ==========================================================
 
-print("PASS")
+@patch(
+    "application.dashboard_collection_service."
+    "build_adaptive_dashboard"
+)
+def test_should_preserve_request_order(
+    mock_build_adaptive_dashboard,
+):
+    """
+    Output order must match input request order.
+    """
+
+    requests = [
+
+        Mock(
+            spec=DashboardRequest,
+        ),
+
+        Mock(
+            spec=DashboardRequest,
+        ),
+
+        Mock(
+            spec=DashboardRequest,
+        ),
+
+    ]
+
+    cards = [
+
+        Mock(
+            spec=DashboardCard,
+        ),
+
+        Mock(
+            spec=DashboardCard,
+        ),
+
+        Mock(
+            spec=DashboardCard,
+        ),
+
+    ]
+
+    mock_build_adaptive_dashboard.side_effect = cards
+
+    result = build_dashboard_collection(
+        requests=requests,
+    )
+
+    assert result == cards
+
+
+# ==========================================================
+# Empty Collection
+# ==========================================================
+
+@patch(
+    "application.dashboard_collection_service."
+    "build_adaptive_dashboard"
+)
+def test_should_return_empty_collection(
+    mock_build_adaptive_dashboard,
+):
+    """
+    Empty request collection should return
+    an empty DashboardCard collection.
+    """
+
+    result = build_dashboard_collection(
+        requests=[],
+    )
+
+    assert result == []
+
+    mock_build_adaptive_dashboard.assert_not_called()
+
+
+# ==========================================================
+# Iterable Support
+# ==========================================================
+
+@patch(
+    "application.dashboard_collection_service."
+    "build_adaptive_dashboard"
+)
+def test_should_accept_request_iterable(
+    mock_build_adaptive_dashboard,
+):
+    """
+    Service should accept any iterable,
+    including generators.
+    """
+
+    request = Mock(
+        spec=DashboardRequest,
+    )
+
+    card = Mock(
+        spec=DashboardCard,
+    )
+
+    mock_build_adaptive_dashboard.return_value = card
+
+    requests = (
+        item
+        for item in [
+            request,
+        ]
+    )
+
+    result = build_dashboard_collection(
+        requests=requests,
+    )
+
+    assert result == [
+        card,
+    ]
+
+    mock_build_adaptive_dashboard.assert_called_once_with(
+        request,
+    )
