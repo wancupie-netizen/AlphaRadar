@@ -1,9 +1,9 @@
 # AlphaRadar Architecture
 
-Status: LOCKED BASELINE  
-Architecture Version: 1.0  
-Established: Sprint E9.5  
-Repository: wancupie-netizen/AlphaRadar
+**Status:** LOCKED BASELINE  
+**Architecture Version:** 1.0  
+**Established:** Sprint E9.5  
+**Repository:** `wancupie-netizen/AlphaRadar`
 
 ---
 
@@ -19,8 +19,8 @@ AlphaRadar is an adaptive intelligence system that:
 6. builds historical experience,
 7. presents adaptive dashboard intelligence.
 
-The system must remain deterministic, explainable,
-testable and maintainable.
+The system must remain deterministic, explainable, testable,
+and maintainable.
 
 ---
 
@@ -33,100 +33,24 @@ Delivery
    ↓
 Application
    ↓
-Domain / Adaptive Contracts
+Domain and Adaptive Contracts
    ↓
 Infrastructure Implementations
-
-
-# Sprint E9.5 — Architecture Lock
-
-Audit awal mendapati repository belum mempunyai dokumen ADR atau architecture rasmi. Jadi sprint ini akan menghasilkan:
-
-```text
-Module 01  Architecture Constitution
-Module 02  Artifact Ownership ADR
-Module 03  Folder Responsibility ADR
-Module 04  Dependency Rules
-Module 05  Engineering SOP
-Module 06  Architecture Verification
 ```
-
-Kita mulakan dengan dokumen induk.
-
-Runner kini secara rasmi bertindak sebagai production orchestrator, termasuk Dashboard Engine, tetapi tidak membuat keputusan atau mengakses business rules.  Adaptive Dashboard Service menerima `DashboardRequest`, membaca history dan menghasilkan `DashboardCard`.  Collection Service pula hanya menerima koleksi request dan mengekalkan susunannya.
-
----
-
-# Module 01 — Architecture Constitution
-
-## Root Folder
-
-```text
-AlphaRadar/
-```
-
-## File Baru
-
-```text
-docs/architecture/AlphaRadar_Architecture.md
-```
-
-## Full File
-
-````markdown
-# AlphaRadar Architecture
-
-Status: LOCKED BASELINE  
-Architecture Version: 1.0  
-Established: Sprint E9.5  
-Repository: wancupie-netizen/AlphaRadar
-
----
-
-## 1. Purpose
-
-AlphaRadar is an adaptive intelligence system that:
-
-1. observes market conditions,
-2. detects signals,
-3. interprets market behaviour,
-4. produces explainable decisions,
-5. records outcomes and learning,
-6. builds historical experience,
-7. presents adaptive dashboard intelligence.
-
-The system must remain deterministic, explainable,
-testable and maintainable.
-
----
-
-## 2. Architecture Principle
-
-AlphaRadar follows this dependency direction:
-
-```text
-Delivery
-   ↓
-Application
-   ↓
-Domain / Adaptive Contracts
-   ↓
-Infrastructure Implementations
-````
 
 Business decisions must not depend on:
 
-* API frameworks,
-* databases,
-* dashboard presentation,
-* schedulers,
-* external market providers.
+- API frameworks,
+- databases,
+- dashboard presentation,
+- schedulers,
+- external market providers.
 
 ---
 
 ## 3. Production Flow
 
-The official production flow is:
+The official AlphaRadar production flow is:
 
 ```text
 Market Provider
@@ -164,11 +88,11 @@ The Production Runner coordinates this flow.
 
 The Runner must not:
 
-* detect signals,
-* interpret markets,
-* make trading decisions,
-* implement serialization rules,
-* contain domain business rules.
+- detect signals,
+- interpret markets,
+- make trading decisions,
+- define serialization rules,
+- contain domain business rules.
 
 ---
 
@@ -180,47 +104,47 @@ Owns stable domain artifacts and domain-level models.
 
 Examples:
 
-* `DecisionArtifact`
-* `KnowledgeArtifact`
-* `LearningArtifact`
-* `OutcomeArtifact`
-* `MarketSnapshot`
-* domain enums
+- `DecisionArtifact`
+- `KnowledgeArtifact`
+- `LearningArtifact`
+- `OutcomeArtifact`
+- `MarketSnapshot`
+- domain enums
 
 Rules:
 
-* immutable where practical,
-* no database access,
-* no API dependency,
-* no scheduler dependency,
-* no presentation logic.
+- artifacts should be immutable where practical,
+- no database access,
+- no API dependency,
+- no scheduler dependency,
+- no presentation logic.
 
 ---
 
 ### `scanner/`
 
-Owns the production intelligence engine and
-market-scanning implementation.
+Owns the production intelligence engine and market-scanning
+implementation.
 
 Examples:
 
-* market acquisition,
-* normalization,
-* observation,
-* signal detection,
-* interpretation,
-* decision execution,
-* lifecycle execution,
-* serialization,
-* persistence adapters,
-* Production Runner.
+- market acquisition,
+- normalization,
+- observation,
+- signal detection,
+- interpretation,
+- decision execution,
+- lifecycle execution,
+- serialization,
+- persistence adapters,
+- Production Runner.
 
 Rules:
 
-* engines may build Core artifacts,
-* Runner performs orchestration only,
-* domain decisions remain inside engines,
-* persistence logic must remain isolated in stores.
+- engines may build Core artifacts,
+- Runner performs orchestration only,
+- domain decisions remain inside engines,
+- persistence logic remains isolated in stores.
 
 ---
 
@@ -230,22 +154,22 @@ Owns adaptive intelligence contracts and behaviour.
 
 Examples:
 
-* ExperienceArtifact,
-* EvidenceArtifact,
-* HistorySummary,
-* DashboardRequest,
-* DashboardCard,
-* experience compilation,
-* history aggregation,
-* dashboard builders.
+- `ExperienceArtifact`
+- `EvidenceArtifact`
+- `HistorySummary`
+- `DashboardRequest`
+- `DashboardCard`
+- experience compilation
+- history aggregation
+- dashboard builders
 
 Rules:
 
-* does not make the original trading decision,
-* does not access external market providers,
-* does not control the Production Runner,
-* adaptive output must be derived from Core decisions
-  and historical experience.
+- does not make the original trading decision,
+- does not access external market providers,
+- does not control the Production Runner,
+- output must be derived from Core decisions and historical
+  experience.
 
 ---
 
@@ -255,20 +179,20 @@ Owns use-case orchestration.
 
 Examples:
 
-* Adaptive Dashboard Service,
-* Dashboard Collection Service,
-* token query services,
-* assemblers,
-* DTO mapping.
+- Adaptive Dashboard Service,
+- Dashboard Collection Service,
+- token query services,
+- assemblers,
+- DTO mapping.
 
 Rules:
 
-* coordinates domain and adaptive modules,
-* does not contain market decision logic,
-* does not duplicate domain calculations,
-* receives and returns explicit contracts,
-* must not accept primitive argument collections where
-  a formal request artifact already exists.
+- coordinates domain and adaptive modules,
+- does not contain market decision logic,
+- does not duplicate domain calculations,
+- receives and returns explicit contracts,
+- must not accept primitive argument collections where a formal
+  request artifact already exists.
 
 ---
 
@@ -278,11 +202,11 @@ Owns the external HTTP delivery boundary.
 
 Rules:
 
-* validates transport input,
-* invokes Application services,
-* converts results into API responses,
-* contains no market intelligence logic,
-* contains no direct database business workflow.
+- validates transport input,
+- invokes Application services,
+- converts results into API responses,
+- contains no market intelligence logic,
+- contains no direct database business workflow.
 
 ---
 
@@ -292,12 +216,12 @@ Owns operational job tracking.
 
 Examples:
 
-* job start,
-* job finish,
-* duration,
-* execution status.
+- job start,
+- job finish,
+- duration,
+- execution status.
 
-It must not influence trading decisions.
+Pulse must not influence trading decisions.
 
 ---
 
@@ -305,8 +229,8 @@ It must not influence trading decisions.
 
 Owns scheduled execution.
 
-It may invoke Production Runner but must not contain
-scanner or decision logic.
+The Scheduler may invoke the Production Runner but must not contain
+scanner, interpretation, or decision logic.
 
 ---
 
@@ -314,47 +238,47 @@ scanner or decision logic.
 
 Owns engineering validation and regression workflows.
 
-Validation scripts must use current package paths and
-current artifact contracts.
+Validation scripts must use current package paths and current
+artifact contracts.
 
 ---
 
 ### `tests/`
 
-Owns automated unit, contract and integration tests.
+Owns automated unit, contract, and integration tests.
 
 Tests must:
 
-* be safe during pytest collection,
-* avoid production side effects,
-* use package-qualified imports,
-* reflect current contracts,
-* test one responsibility clearly.
+- be safe during pytest collection,
+- avoid production side effects,
+- use package-qualified imports,
+- reflect current contracts,
+- test one responsibility clearly.
 
 ---
 
 ## 5. Artifact Ownership
 
-| Artifact           | Owner                                       |
-| ------------------ | ------------------------------------------- |
-| DecisionArtifact   | `core/artifacts/decision_artifact.py`       |
-| OutcomeArtifact    | `core/artifacts/outcome_artifact.py`        |
-| LearningArtifact   | `core/artifacts/learning_artifact.py`       |
-| KnowledgeArtifact  | `core/artifacts/knowledge_artifact.py`      |
-| ExperienceArtifact | `adaptive/artifacts/experience_artifact.py` |
-| EvidenceArtifact   | `adaptive/artifacts/evidence_artifact.py`   |
-| HistorySummary     | `adaptive/history/history_summary.py`       |
-| DashboardRequest   | `adaptive/dashboard/dashboard_request.py`   |
-| DashboardCard      | `adaptive/dashboard/dashboard_card.py`      |
-| Lifecycle Package  | `scanner/lifecycle_engine.py`               |
+| Artifact | Owner |
+|---|---|
+| `DecisionArtifact` | `core/artifacts/decision_artifact.py` |
+| `OutcomeArtifact` | `core/artifacts/outcome_artifact.py` |
+| `LearningArtifact` | `core/artifacts/learning_artifact.py` |
+| `KnowledgeArtifact` | `core/artifacts/knowledge_artifact.py` |
+| `ExperienceArtifact` | `adaptive/artifacts/experience_artifact.py` |
+| `EvidenceArtifact` | `adaptive/artifacts/evidence_artifact.py` |
+| `HistorySummary` | `adaptive/history/history_summary.py` |
+| `DashboardRequest` | `adaptive/dashboard/dashboard_request.py` |
+| `DashboardCard` | `adaptive/dashboard/dashboard_card.py` |
+| Lifecycle Package | `scanner/lifecycle_engine.py` |
 
 Artifact ownership means:
 
-* the owner defines the contract,
-* builders may construct the artifact,
-* services may coordinate it,
-* consumers may read it,
-* consumers must not redefine it.
+- the owner defines the contract,
+- builders may construct the artifact,
+- services may coordinate it,
+- consumers may read it,
+- consumers must not redefine it.
 
 ---
 
@@ -390,17 +314,16 @@ DashboardCollectionService
 list[DashboardCard]
 ```
 
-The Collection Service must not reconstruct
-DashboardRequest fields.
+The Collection Service must not reconstruct or duplicate
+`DashboardRequest` fields.
 
 ---
 
 ## 7. Fingerprint Ownership
 
-AlphaRadar currently contains two distinct fingerprint
-concepts.
+AlphaRadar currently contains two distinct fingerprint concepts.
 
-### Operational Intelligence Fingerprint
+### 7.1 Operational Intelligence Fingerprint
 
 Location:
 
@@ -410,13 +333,13 @@ scanner/knowledge_fingerprint.py
 
 Purpose:
 
-* derived from an Intelligence Package,
-* identifies decision and interpretation state,
-* used by Intelligence persistence,
-* used for Adaptive history lookup,
-* built once by Production Runner.
+- derived from an Intelligence Package,
+- identifies decision and interpretation state,
+- used by Intelligence persistence,
+- used for Adaptive history lookup,
+- built once by the Production Runner.
 
-### Learning Fingerprint
+### 7.2 Learning Fingerprint
 
 Location:
 
@@ -426,22 +349,20 @@ core/knowledge/fingerprint.py
 
 Purpose:
 
-* derived from LearningArtifact collections,
-* belongs to knowledge aggregation,
-* currently uses a placeholder implementation.
+- derived from `LearningArtifact` collections,
+- belongs to knowledge aggregation,
+- currently uses a placeholder implementation.
 
-These two fingerprints must not be treated as the same
-contract.
+These two fingerprints must not be treated as the same contract.
 
-A future ADR may rename them to remove semantic ambiguity.
-Until that ADR is approved, their current responsibilities
-remain separate.
+A future ADR may rename them to remove semantic ambiguity. Until
+that ADR is approved, their responsibilities remain separate.
 
 ---
 
 ## 8. Dependency Rules
 
-Allowed:
+### Allowed
 
 ```text
 api → application
@@ -453,7 +374,7 @@ scanner → core
 scheduler → scanner runner
 ```
 
-Disallowed:
+### Disallowed
 
 ```text
 core → scanner
@@ -471,10 +392,10 @@ Circular imports are prohibited.
 
 ## 9. Request Contract Rule
 
-Whenever a formal request artifact exists, Application
-services must receive that request artifact.
+Whenever a formal request artifact exists, Application services
+must receive that request artifact.
 
-Example:
+Correct:
 
 ```python
 build_adaptive_dashboard(
@@ -482,7 +403,7 @@ build_adaptive_dashboard(
 )
 ```
 
-Not:
+Incorrect:
 
 ```python
 build_adaptive_dashboard(
@@ -493,7 +414,7 @@ build_adaptive_dashboard(
 )
 ```
 
-This prevents contract drift and primitive obsession.
+This rule prevents contract drift and primitive obsession.
 
 ---
 
@@ -513,10 +434,10 @@ Store
 
 Stores must not:
 
-* construct domain decisions,
-* infer missing business values,
-* mutate immutable artifacts,
-* silently change artifact contracts.
+- construct domain decisions,
+- infer missing business values,
+- mutate immutable artifacts,
+- silently redefine artifact contracts.
 
 ---
 
@@ -536,8 +457,8 @@ Deprecated for new code:
 datetime.utcnow()
 ```
 
-Existing usages may be migrated incrementally through
-dedicated refactoring modules.
+Existing usages may be migrated incrementally through dedicated
+refactoring modules.
 
 ---
 
@@ -560,7 +481,7 @@ Full File or Full Section Replacement
   ↓
 Targeted Test
   ↓
-Regression Test
+Relevant Regression Test
   ↓
 PASS
   ↓
@@ -569,8 +490,8 @@ Commit
 LOCK
 ```
 
-No architecture contract is considered locked until its
-tests pass and the change is committed.
+No architecture contract is considered locked until its tests pass
+and the change is committed.
 
 ---
 
@@ -578,32 +499,33 @@ tests pass and the change is committed.
 
 The following contracts are locked:
 
-* DecisionArtifact
-* DashboardRequest
-* DashboardRequestBuilder
-* AdaptiveDashboardService
-* DashboardCard
-* DashboardCollectionService
-* Module 04C Production Runner integration
+- `DecisionArtifact`
+- `DashboardRequest`
+- `DashboardRequestBuilder`
+- `AdaptiveDashboardService`
+- `DashboardCard`
+- `DashboardCollectionService`
+- Module 04C Production Runner integration
 
-Changes to these contracts require a new ADR.
+Changes to these contracts require a new Architecture Decision
+Record.
 
 ---
 
 ## 14. Legacy Code Policy
 
-Legacy modules must not be deleted merely because they fail
-current tests.
+Legacy modules must not be deleted merely because they fail current
+tests.
 
 Each legacy module must first be classified as:
 
-* migrate,
-* replace,
-* archive,
-* delete.
+- migrate,
+- replace,
+- archive,
+- delete.
 
-Deletion requires evidence that no active production path,
-test, import or consumer depends on the module.
+Deletion requires evidence that no active production path, test,
+import, or consumer depends on the module.
 
 ---
 
@@ -611,11 +533,30 @@ test, import or consumer depends on the module.
 
 A module is complete only when:
 
-* ownership is clear,
-* contracts are explicit,
-* dependency direction is valid,
-* targeted tests pass,
-* relevant regression tests pass,
-* no production side effects occur during test collection,
-* changes are committed,
-* status is marked LOCKED.
+- ownership is clear,
+- contracts are explicit,
+- dependency direction is valid,
+- targeted tests pass,
+- relevant regression tests pass,
+- no production side effects occur during test collection,
+- changes are committed,
+- status is marked `LOCKED`.
+
+---
+
+## 16. Architecture Change Control
+
+Any proposal that changes:
+
+- artifact ownership,
+- dependency direction,
+- service request contracts,
+- Production Runner responsibilities,
+- persistence boundaries,
+- folder responsibilities,
+
+must be documented in a new ADR before implementation.
+
+The Architecture Constitution remains the baseline. ADRs explain
+approved exceptions or evolution without silently rewriting prior
+decisions.
