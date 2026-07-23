@@ -2,7 +2,6 @@
 Tests for AlphaRadar Dashboard Preview Entry Point.
 """
 
-from pathlib import Path
 from unittest.mock import patch
 
 from dashboard_preview import (
@@ -44,12 +43,15 @@ def test_should_write_dashboard_preview(
     tmp_path,
 ):
     """
-    Preview entry point should save standalone HTML.
+    Preview entry point should save Dashboard V2 HTML.
     """
 
     card = build_preview_dashboard_card()
 
-    output_file = tmp_path / "dashboard_preview.html"
+    output_file = (
+        tmp_path
+        / "dashboard_preview.html"
+    )
 
     result = write_dashboard_preview(
 
@@ -69,13 +71,33 @@ def test_should_write_dashboard_preview(
 
     assert "<!DOCTYPE html>" in html
 
-    assert "ALPHARADAR" in html
+    assert "AlphaRadar Dashboard" in html
+
+    assert "AlphaRadar" in html
 
     assert "BTC" in html
 
+    assert "Market Decision" in html
+
     assert "WATCH" in html
 
+    assert "Radar Confidence" in html
+
+    assert "HIGH" in html
+
+    assert "Historical Intelligence" in html
+
     assert "66.67%" in html
+
+    assert "KNOWN PATTERN" in html
+
+    assert "Intelligence Summary" in html
+
+    assert "Evidence" in html
+
+    assert "ACCUMULATION" in html
+
+    assert "dashboard-component-stack" in html
 
 
 # ==========================================================

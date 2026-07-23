@@ -2,14 +2,15 @@
 AlphaRadar Dashboard HTML Presenter.
 
 Presentation boundary for converting a DashboardCard
-into a complete standalone HTML document.
+into a complete standalone Dashboard V2 HTML document.
 
 Responsibilities
 ----------------
 - Receive DashboardCard
-- Escape dynamic text safely
-- Format timestamps
-- Render standalone dashboard HTML
+- Format presentation timestamps
+- Coordinate Dashboard components
+- Apply the central Dashboard theme
+- Render a standalone HTML document
 
 This module does NOT:
 - access databases
@@ -18,6 +19,7 @@ This module does NOT:
 - make trading decisions
 - write files
 - open web browsers
+- calculate adaptive history
 """
 
 from __future__ import annotations
@@ -29,32 +31,53 @@ from adaptive.dashboard.dashboard_card import (
     DashboardCard,
 )
 
+from presentation.dashboard_components.card import (
+    render_dashboard_card_container,
+)
+
+from presentation.dashboard_components.decision_card import (
+    render_decision_card,
+)
+
+from presentation.dashboard_components.evidence_panel import (
+    render_evidence_panel,
+)
+
+from presentation.dashboard_components.header import (
+    render_dashboard_header,
+)
+
+from presentation.dashboard_components.historical_panel import (
+    render_historical_panel,
+)
+
+from presentation.dashboard_theme import (
+    THEME,
+    build_dashboard_css,
+)
+
 
 # ==========================================================
-# Formatting Helpers
+# Formatting
 # ==========================================================
 
-def _escape_text(
-    value: object,
-) -> str:
-    """
-    Convert a value into escaped HTML-safe text.
-    """
-
-    return escape(
-        str(value),
-        quote=True,
-    )
-
-
-def _format_datetime(
+def format_dashboard_datetime(
     value: datetime,
 ) -> str:
     """
-    Format a datetime for dashboard display.
+    Format a Dashboard datetime for human-readable display.
 
     Timezone information is retained when available.
     """
+
+    if not isinstance(
+        value,
+        datetime,
+    ):
+
+        raise ValueError(
+            "Dashboard timestamp must be a datetime."
+        )
 
     return value.isoformat(
         sep=" ",
@@ -62,88 +85,501 @@ def _format_datetime(
     )
 
 
-def _format_percentage(
-    value: float,
+# ==========================================================
+# Summary Component
+# ==========================================================
+
+def render_summary_panel(
+    summary: str,
 ) -> str:
     """
-    Format historical success as a percentage.
+    Render the current Intelligence summary.
+
+    This remains local to the presenter until the dedicated
+    AI Summary Component is introduced in Module 08.
     """
 
-    return f"{value:.2f}%"
+    if not isinstance(
+        summary,
+        str,
+    ):
 
-
-def _decision_class(
-    decision: str,
-) -> str:
-    """
-    Return a presentation class for a decision.
-    """
-
-    normalized = decision.strip().upper()
-
-    if normalized in {
-        "BUY",
-        "STRONG_BUY",
-    }:
-        return "decision-positive"
-
-    if normalized in {
-        "SELL",
-        "STRONG_SELL",
-        "AVOID",
-    }:
-        return "decision-negative"
-
-    return "decision-neutral"
-
-
-def _confidence_class(
-    confidence: str,
-) -> str:
-    """
-    Return a presentation class for confidence.
-    """
-
-    normalized = confidence.strip().upper()
-
-    if normalized == "HIGH":
-        return "confidence-high"
-
-    if normalized == "LOW":
-        return "confidence-low"
-
-    return "confidence-medium"
-
-
-def _render_reasons(
-    reasons: list[str],
-) -> str:
-    """
-    Render decision reasons as HTML list items.
-    """
-
-    if not reasons:
-
-        return (
-            '<li class="reason-item reason-empty">'
-            "No decision reasons available."
-            "</li>"
+        raise ValueError(
+            "Dashboard summary must be a string."
         )
 
-    return "\n".join(
+    normalized = summary.strip()
 
-        (
-            '<li class="reason-item">'
-            f"{_escape_text(reason)}"
-            "</li>"
+    if not normalized:
+
+        normalized = (
+            "No intelligence summary is currently available."
         )
 
-        for reason in reasons
+    content = (
+        '<p class="intelligence-summary">'
+        f"{escape(normalized)}"
+        "</p>"
+    )
+
+    return render_dashboard_card_container(
+
+        title="Intelligence Summary",
+
+        subtitle=(
+            "AlphaRadar explanation of the current "
+            "market recommendation."
+        ),
+
+        content=content,
+
+        css_class="summary-panel",
+
     )
 
 
 # ==========================================================
-# Dashboard Presenter
+# Component Orchestration
+# ==========================================================
+
+def render_dashboard_components(
+    card: DashboardCard,
+) -> str:
+    """
+    Render all Dashboard V2 components.
+
+    Component order is part of the presentation contract.
+    """
+
+    if not isinstance(
+        card,
+        DashboardCard,
+    ):
+
+        raise ValueError(
+            "DashboardCard is required."
+        )
+
+    last_updated = format_dashboard_datetime(
+        card.last_updated,
+    )
+
+    header = render_dashboard_header(
+
+        token=
+            card.token,
+
+        last_updated=
+            last_updated,
+
+        engine_version=
+            card.metadata.engine_version,
+
+    )
+
+    decision = render_decision_card(
+
+        decision=
+            card.decision,
+
+        confidence=
+            card.confidence,
+
+    )
+
+    history = render_historical_panel(
+
+        historical_success=
+            card.historical_success,
+
+        seen_before=
+            card.seen_before,
+
+    )
+
+    summary = render_summary_panel(
+        card.summary,
+    )
+
+    evidence = render_evidence_panel(
+
+        reasons=
+            card.reasons,
+
+    )
+
+    return (
+        '<div class="dashboard-component-stack">'
+        f"{header}"
+        '<div class="dashboard-primary-grid">'
+        f"{decision}"
+        f"{history}"
+        "</div>"
+        '<div class="dashboard-secondary-grid">'
+        f"{summary}"
+        f"{evidence}"
+        "</div>"
+        "</div>"
+    )
+
+
+# ==========================================================
+# Dashboard CSS
+# ==========================================================
+
+def build_dashboard_v2_css() -> str:
+    """
+    Build shared and presenter-level Dashboard V2 CSS.
+    """
+
+    shared_css = build_dashboard_css()
+
+    return f"""
+{shared_css}
+
+* {{
+    box-sizing: border-box;
+}}
+
+:root {{
+    color-scheme: dark;
+
+    --dashboard-background:
+        {THEME["background"]};
+
+    --dashboard-surface:
+        {THEME["surface"]};
+
+    --dashboard-surface-alt:
+        {THEME["surface_alt"]};
+
+    --dashboard-text:
+        {THEME["text"]};
+
+    --dashboard-muted:
+        {THEME["muted"]};
+
+    --dashboard-border:
+        {THEME["border"]};
+}}
+
+body {{
+    min-height: 100vh;
+
+    background:
+        radial-gradient(
+            circle at top right,
+            rgba(59, 130, 246, 0.14),
+            transparent 34%
+        ),
+        var(--dashboard-background);
+}}
+
+.page-shell {{
+    width: min(
+        1180px,
+        calc(100% - 32px)
+    );
+
+    margin: 0 auto;
+
+    padding:
+        40px
+        0
+        64px;
+}}
+
+.dashboard-component-stack {{
+    display: grid;
+
+    gap: 24px;
+}}
+
+.dashboard-primary-grid,
+.dashboard-secondary-grid {{
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            2,
+            minmax(0, 1fr)
+        );
+
+    gap: 24px;
+}}
+
+.dashboard-panel {{
+    margin-bottom: 0;
+}}
+
+.dashboard-panel-header {{
+    margin-bottom: 22px;
+}}
+
+.dashboard-panel-title {{
+    margin:
+        0
+        0
+        7px;
+
+    font-size: 1rem;
+
+    letter-spacing: 0.05em;
+
+    text-transform: uppercase;
+}}
+
+.dashboard-panel-subtitle {{
+    margin: 0;
+
+    color: var(--dashboard-muted);
+
+    font-size: 0.84rem;
+
+    line-height: 1.55;
+}}
+
+.dashboard-panel-content {{
+    min-width: 0;
+}}
+
+.decision-card-content {{
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        auto;
+
+    align-items: end;
+
+    gap: 24px;
+}}
+
+.decision-card-primary,
+.decision-card-confidence {{
+    display: grid;
+
+    gap: 10px;
+}}
+
+.decision-card-label,
+.historical-metric-label {{
+    color: var(--dashboard-muted);
+
+    font-size: 0.74rem;
+
+    font-weight: 700;
+
+    letter-spacing: 0.09em;
+
+    text-transform: uppercase;
+}}
+
+.decision-card-value {{
+    font-size:
+        clamp(
+            2.25rem,
+            7vw,
+            4.4rem
+        );
+
+    line-height: 1;
+
+    letter-spacing: -0.04em;
+}}
+
+.confidence-badge {{
+    border:
+        1px solid
+        var(--dashboard-border);
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.04
+        );
+
+    color: var(--dashboard-text);
+
+    text-align: center;
+}}
+
+.historical-panel-grid {{
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            3,
+            minmax(0, 1fr)
+        );
+
+    gap: 14px;
+}}
+
+.historical-metric {{
+    display: grid;
+
+    align-content: start;
+
+    gap: 10px;
+
+    min-height: 112px;
+
+    padding: 16px;
+
+    border:
+        1px solid
+        var(--dashboard-border);
+
+    border-radius: 12px;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.025
+        );
+}}
+
+.historical-metric-value {{
+    font-size: 1.4rem;
+}}
+
+.adaptive-memory-known {{
+    border:
+        1px solid
+        rgba(
+            34,
+            197,
+            94,
+            0.42
+        );
+
+    color: {THEME["buy"]};
+}}
+
+.adaptive-memory-new {{
+    border:
+        1px solid
+        rgba(
+            100,
+            116,
+            139,
+            0.55
+        );
+
+    color: {THEME["unknown"]};
+}}
+
+.intelligence-summary {{
+    margin: 0;
+
+    color: var(--dashboard-text);
+
+    font-size: 1.04rem;
+
+    line-height: 1.75;
+}}
+
+.evidence-list {{
+    display: grid;
+
+    gap: 10px;
+
+    margin: 0;
+
+    padding: 0;
+
+    list-style: none;
+}}
+
+.evidence-list li {{
+    padding: 12px 14px;
+
+    border:
+        1px solid
+        var(--dashboard-border);
+
+    border-radius: 11px;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.025
+        );
+
+    color: var(--dashboard-muted);
+}}
+
+.evidence-list li::before {{
+    content: "✓";
+
+    margin-right: 10px;
+
+    color: {THEME["watch"]};
+
+    font-weight: 800;
+}}
+
+.empty-state {{
+    margin: 0;
+
+    color: var(--dashboard-muted);
+
+    font-style: italic;
+}}
+
+.dashboard-footer {{
+    display: flex;
+
+    justify-content: space-between;
+
+    gap: 20px;
+
+    margin-top: 24px;
+
+    padding:
+        16px
+        4px;
+
+    color: var(--dashboard-muted);
+
+    font-size: 0.76rem;
+}}
+
+@media (
+    max-width: 820px
+) {{
+
+    .dashboard-primary-grid,
+    .dashboard-secondary-grid {{
+        grid-template-columns: 1fr;
+    }}
+
+    .historical-panel-grid {{
+        grid-template-columns: 1fr;
+    }}
+
+    .decision-card-content {{
+        grid-template-columns: 1fr;
+
+        align-items: start;
+    }}
+
+    .dashboard-footer {{
+        flex-direction: column;
+    }}
+}}
+"""
+
+
+# ==========================================================
+# Complete Presenter
 # ==========================================================
 
 def render_dashboard_html(
@@ -160,489 +596,71 @@ def render_dashboard_html(
     Returns
     -------
     str
-        Complete UTF-8 HTML document.
+        Complete UTF-8 Dashboard V2 HTML document.
     """
 
-    token = _escape_text(
+    if not isinstance(
+        card,
+        DashboardCard,
+    ):
+
+        raise ValueError(
+            "DashboardCard is required."
+        )
+
+    safe_token = escape(
         card.token,
+        quote=True,
     )
 
-    decision = _escape_text(
-        card.decision,
+    generated_at = format_dashboard_datetime(
+        card.metadata.generated_at,
     )
 
-    confidence = _escape_text(
-        card.confidence,
+    last_updated = format_dashboard_datetime(
+        card.last_updated,
     )
 
-    summary = _escape_text(
-        card.summary,
+    components = render_dashboard_components(
+        card,
     )
 
-    historical_success = _format_percentage(
-        card.historical_success,
-    )
-
-    last_updated = _escape_text(
-        _format_datetime(
-            card.last_updated,
-        )
-    )
-
-    generated_at = _escape_text(
-        _format_datetime(
-            card.metadata.generated_at,
-        )
-    )
-
-    engine_version = _escape_text(
-        card.metadata.engine_version,
-    )
-
-    decision_css_class = _decision_class(
-        card.decision,
-    )
-
-    confidence_css_class = _confidence_class(
-        card.confidence,
-    )
-
-    seen_before_text = (
-        "Seen Before"
-        if card.seen_before
-        else "New Pattern"
-    )
-
-    seen_before_class = (
-        "history-known"
-        if card.seen_before
-        else "history-new"
-    )
-
-    reasons_html = _render_reasons(
-        card.reasons,
-    )
+    css = build_dashboard_v2_css()
 
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1.0"
     >
-    <title>AlphaRadar Dashboard — {token}</title>
+
+    <title>
+        AlphaRadar Dashboard — {safe_token}
+    </title>
 
     <style>
-        :root {{
-            color-scheme: dark;
-
-            --background: #07111f;
-            --surface: #0d1b2d;
-            --surface-soft: #12243a;
-            --border: #213853;
-
-            --text-primary: #f5f8fc;
-            --text-secondary: #9db0c8;
-            --accent: #35d0ba;
-
-            --positive: #39d98a;
-            --negative: #ff667d;
-            --neutral: #ffcb57;
-        }}
-
-        * {{
-            box-sizing: border-box;
-        }}
-
-        body {{
-            margin: 0;
-            min-height: 100vh;
-            background:
-                radial-gradient(
-                    circle at top right,
-                    rgba(53, 208, 186, 0.12),
-                    transparent 34%
-                ),
-                var(--background);
-            color: var(--text-primary);
-            font-family:
-                Inter,
-                system-ui,
-                -apple-system,
-                BlinkMacSystemFont,
-                "Segoe UI",
-                sans-serif;
-        }}
-
-        .page-shell {{
-            width: min(1100px, calc(100% - 32px));
-            margin: 0 auto;
-            padding: 40px 0 64px;
-        }}
-
-        .topbar {{
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 24px;
-            margin-bottom: 28px;
-        }}
-
-        .brand {{
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }}
-
-        .brand-mark {{
-            display: grid;
-            place-items: center;
-            width: 42px;
-            height: 42px;
-            border: 1px solid rgba(53, 208, 186, 0.45);
-            border-radius: 12px;
-            background: rgba(53, 208, 186, 0.1);
-            color: var(--accent);
-            font-weight: 800;
-        }}
-
-        .brand-name {{
-            margin: 0;
-            font-size: 1.05rem;
-            letter-spacing: 0.08em;
-        }}
-
-        .brand-label {{
-            margin: 2px 0 0;
-            color: var(--text-secondary);
-            font-size: 0.78rem;
-        }}
-
-        .engine-version {{
-            color: var(--text-secondary);
-            font-size: 0.82rem;
-        }}
-
-        .dashboard-card {{
-            overflow: hidden;
-            border: 1px solid var(--border);
-            border-radius: 22px;
-            background:
-                linear-gradient(
-                    145deg,
-                    rgba(18, 36, 58, 0.94),
-                    rgba(8, 20, 35, 0.98)
-                );
-            box-shadow: 0 28px 70px rgba(0, 0, 0, 0.35);
-        }}
-
-        .card-header {{
-            display: flex;
-            justify-content: space-between;
-            gap: 24px;
-            padding: 30px;
-            border-bottom: 1px solid var(--border);
-        }}
-
-        .token-label {{
-            margin: 0 0 8px;
-            color: var(--text-secondary);
-            font-size: 0.78rem;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-        }}
-
-        .token-name {{
-            margin: 0;
-            font-size: clamp(2.4rem, 7vw, 4.8rem);
-            line-height: 1;
-        }}
-
-        .status-column {{
-            display: flex;
-            flex-wrap: wrap;
-            align-content: flex-start;
-            justify-content: flex-end;
-            gap: 10px;
-        }}
-
-        .status-pill {{
-            display: inline-flex;
-            align-items: center;
-            min-height: 34px;
-            padding: 7px 13px;
-            border: 1px solid var(--border);
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.035);
-            font-size: 0.78rem;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-        }}
-
-        .decision-positive,
-        .confidence-high,
-        .history-known {{
-            border-color: rgba(57, 217, 138, 0.4);
-            color: var(--positive);
-        }}
-
-        .decision-negative,
-        .confidence-low {{
-            border-color: rgba(255, 102, 125, 0.4);
-            color: var(--negative);
-        }}
-
-        .decision-neutral,
-        .confidence-medium,
-        .history-new {{
-            border-color: rgba(255, 203, 87, 0.4);
-            color: var(--neutral);
-        }}
-
-        .metrics {{
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            border-bottom: 1px solid var(--border);
-        }}
-
-        .metric {{
-            padding: 24px 30px;
-            border-right: 1px solid var(--border);
-        }}
-
-        .metric:last-child {{
-            border-right: 0;
-        }}
-
-        .metric-label {{
-            margin: 0 0 9px;
-            color: var(--text-secondary);
-            font-size: 0.76rem;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-        }}
-
-        .metric-value {{
-            margin: 0;
-            font-size: 1.45rem;
-            font-weight: 750;
-        }}
-
-        .content-grid {{
-            display: grid;
-            grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
-        }}
-
-        .content-section {{
-            padding: 30px;
-        }}
-
-        .content-section + .content-section {{
-            border-left: 1px solid var(--border);
-        }}
-
-        .section-title {{
-            margin: 0 0 16px;
-            font-size: 0.8rem;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-        }}
-
-        .summary {{
-            margin: 0;
-            color: var(--text-primary);
-            font-size: 1.08rem;
-            line-height: 1.75;
-        }}
-
-        .reason-list {{
-            display: grid;
-            gap: 10px;
-            margin: 0;
-            padding: 0;
-            list-style: none;
-        }}
-
-        .reason-item {{
-            padding: 12px 14px;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.025);
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }}
-
-        .reason-item::before {{
-            content: "●";
-            margin-right: 10px;
-            color: var(--accent);
-        }}
-
-        .reason-empty::before {{
-            color: var(--text-secondary);
-        }}
-
-        .card-footer {{
-            display: flex;
-            justify-content: space-between;
-            gap: 20px;
-            padding: 18px 30px;
-            border-top: 1px solid var(--border);
-            color: var(--text-secondary);
-            font-size: 0.76rem;
-        }}
-
-        @media (max-width: 760px) {{
-            .card-header {{
-                flex-direction: column;
-            }}
-
-            .status-column {{
-                justify-content: flex-start;
-            }}
-
-            .metrics {{
-                grid-template-columns: 1fr;
-            }}
-
-            .metric {{
-                border-right: 0;
-                border-bottom: 1px solid var(--border);
-            }}
-
-            .metric:last-child {{
-                border-bottom: 0;
-            }}
-
-            .content-grid {{
-                grid-template-columns: 1fr;
-            }}
-
-            .content-section + .content-section {{
-                border-top: 1px solid var(--border);
-                border-left: 0;
-            }}
-
-            .card-footer {{
-                flex-direction: column;
-            }}
-        }}
+        {css}
     </style>
 </head>
 
 <body>
     <main class="page-shell">
-        <header class="topbar">
-            <div class="brand">
-                <div class="brand-mark">AR</div>
+        {components}
 
-                <div>
-                    <h1 class="brand-name">ALPHARADAR</h1>
-                    <p class="brand-label">
-                        Adaptive Intelligence Dashboard
-                    </p>
-                </div>
-            </div>
+        <footer class="dashboard-footer">
+            <span>
+                Last updated:
+                {escape(last_updated)}
+            </span>
 
-            <div class="engine-version">
-                Engine {engine_version}
-            </div>
-        </header>
-
-        <article class="dashboard-card">
-            <header class="card-header">
-                <div>
-                    <p class="token-label">Tracked Asset</p>
-                    <h2 class="token-name">{token}</h2>
-                </div>
-
-                <div class="status-column">
-                    <span
-                        class="status-pill {decision_css_class}"
-                    >
-                        {decision}
-                    </span>
-
-                    <span
-                        class="status-pill {confidence_css_class}"
-                    >
-                        {confidence} Confidence
-                    </span>
-
-                    <span
-                        class="status-pill {seen_before_class}"
-                    >
-                        {seen_before_text}
-                    </span>
-                </div>
-            </header>
-
-            <section class="metrics">
-                <div class="metric">
-                    <p class="metric-label">
-                        Recommended Action
-                    </p>
-
-                    <p class="metric-value">
-                        {decision}
-                    </p>
-                </div>
-
-                <div class="metric">
-                    <p class="metric-label">
-                        Confidence
-                    </p>
-
-                    <p class="metric-value">
-                        {confidence}
-                    </p>
-                </div>
-
-                <div class="metric">
-                    <p class="metric-label">
-                        Historical Success
-                    </p>
-
-                    <p class="metric-value">
-                        {historical_success}
-                    </p>
-                </div>
-            </section>
-
-            <div class="content-grid">
-                <section class="content-section">
-                    <h3 class="section-title">
-                        Intelligence Summary
-                    </h3>
-
-                    <p class="summary">
-                        {summary}
-                    </p>
-                </section>
-
-                <section class="content-section">
-                    <h3 class="section-title">
-                        Decision Reasons
-                    </h3>
-
-                    <ul class="reason-list">
-                        {reasons_html}
-                    </ul>
-                </section>
-            </div>
-
-            <footer class="card-footer">
-                <span>
-                    Last updated: {last_updated}
-                </span>
-
-                <span>
-                    Dashboard generated: {generated_at}
-                </span>
-            </footer>
-        </article>
+            <span>
+                Dashboard generated:
+                {escape(generated_at)}
+            </span>
+        </footer>
     </main>
 </body>
 </html>
