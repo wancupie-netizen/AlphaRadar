@@ -31,8 +31,8 @@ from adaptive.dashboard.dashboard_card import (
     DashboardCard,
 )
 
-from presentation.dashboard_components.card import (
-    render_dashboard_card_container,
+from presentation.dashboard_components.ai_summary import (
+    render_ai_summary_panel,
 )
 
 from presentation.dashboard_components.decision_card import (
@@ -82,59 +82,6 @@ def format_dashboard_datetime(
     return value.isoformat(
         sep=" ",
         timespec="seconds",
-    )
-
-
-# ==========================================================
-# Summary Component
-# ==========================================================
-
-def render_summary_panel(
-    summary: str,
-) -> str:
-    """
-    Render the current Intelligence summary.
-
-    This remains local to the presenter until the dedicated
-    AI Summary Component is introduced in Module 08.
-    """
-
-    if not isinstance(
-        summary,
-        str,
-    ):
-
-        raise ValueError(
-            "Dashboard summary must be a string."
-        )
-
-    normalized = summary.strip()
-
-    if not normalized:
-
-        normalized = (
-            "No intelligence summary is currently available."
-        )
-
-    content = (
-        '<p class="intelligence-summary">'
-        f"{escape(normalized)}"
-        "</p>"
-    )
-
-    return render_dashboard_card_container(
-
-        title="Intelligence Summary",
-
-        subtitle=(
-            "AlphaRadar explanation of the current "
-            "market recommendation."
-        ),
-
-        content=content,
-
-        css_class="summary-panel",
-
     )
 
 
@@ -197,8 +144,11 @@ def render_dashboard_components(
 
     )
 
-    summary = render_summary_panel(
-        card.summary,
+    summary = render_ai_summary_panel(
+
+        summary=
+            card.summary,
+
     )
 
     evidence = render_evidence_panel(
@@ -587,16 +537,6 @@ def render_dashboard_html(
 ) -> str:
     """
     Render a DashboardCard as a standalone HTML document.
-
-    Parameters
-    ----------
-    card
-        DashboardCard to present.
-
-    Returns
-    -------
-    str
-        Complete UTF-8 Dashboard V2 HTML document.
     """
 
     if not isinstance(

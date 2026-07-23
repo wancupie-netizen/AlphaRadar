@@ -15,7 +15,6 @@ from presentation.dashboard_html_presenter import (
     format_dashboard_datetime,
     render_dashboard_components,
     render_dashboard_html,
-    render_summary_panel,
 )
 
 
@@ -99,60 +98,6 @@ def test_should_reject_invalid_dashboard_datetime():
         format_dashboard_datetime(
             "2026-07-22",
         )
-
-
-# ==========================================================
-# Summary
-# ==========================================================
-
-def test_should_render_summary_panel():
-    """
-    Summary should use the shared Dashboard card.
-    """
-
-    html = render_summary_panel(
-        "Bullish momentum detected.",
-    )
-
-    assert "Intelligence Summary" in html
-
-    assert "Bullish momentum detected." in html
-
-    assert "summary-panel" in html
-
-    assert "dashboard-panel-content" in html
-
-
-def test_should_render_empty_summary_state():
-    """
-    Blank summaries should display a clear empty state.
-    """
-
-    html = render_summary_panel(
-        "   ",
-    )
-
-    assert (
-        "No intelligence summary is currently available."
-        in html
-    )
-
-
-def test_should_escape_summary_html():
-    """
-    Data-derived summary text must be escaped.
-    """
-
-    html = render_summary_panel(
-        "<script>alert('summary')</script>",
-    )
-
-    assert (
-        "<script>alert('summary')</script>"
-        not in html
-    )
-
-    assert "&lt;script&gt;" in html
 
 
 # ==========================================================
@@ -315,12 +260,12 @@ def test_should_escape_dynamic_html_values():
 
 
 # ==========================================================
-# Empty Evidence
+# Empty States
 # ==========================================================
 
-def test_should_render_empty_evidence_state():
+def test_should_render_empty_states():
     """
-    Empty reasons should use the Evidence empty state.
+    Empty summary and reasons should use component states.
     """
 
     card = create_dashboard_card(
@@ -337,7 +282,7 @@ def test_should_render_empty_evidence_state():
 
         reasons=[],
 
-        summary="No historical evidence available.",
+        summary="   ",
 
         last_updated=datetime.now(
             timezone.utc,
@@ -347,6 +292,11 @@ def test_should_render_empty_evidence_state():
 
     html = render_dashboard_html(
         card,
+    )
+
+    assert (
+        "No intelligence summary is currently available."
+        in html
     )
 
     assert (
