@@ -16,7 +16,7 @@ This module does NOT:
 """
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 # --------------------------------------------------
@@ -104,7 +104,9 @@ def create_dashboard_card(
 
             engine_version="1.0.0",
 
-            generated_at=datetime.utcnow(),
+            generated_at=datetime.now(
+                timezone.utc,
+            ),
 
         ),
 
