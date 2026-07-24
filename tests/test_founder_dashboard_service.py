@@ -2,7 +2,10 @@
 Tests for AlphaRadar Founder Dashboard Service.
 """
 
-from datetime import datetime, timezone
+from datetime import (
+    datetime,
+    timezone,
+)
 
 from adaptive.dashboard.dashboard_card import (
     create_dashboard_card,
@@ -22,33 +25,26 @@ def build_test_card(
     """
 
     return create_dashboard_card(
-
         token=token,
-
         decision="WATCH",
-
         confidence="HIGH",
-
         historical_success=66.67,
-
         seen_before=True,
-
         reasons=[
             "MOMENTUM",
         ],
-
-        summary="Market intelligence available.",
-
+        summary=(
+            "Market intelligence available."
+        ),
         last_updated=datetime.now(
             timezone.utc,
         ),
-
     )
 
 
-def test_should_define_five_founder_tokens():
+def test_should_keep_founder_fallback_tokens():
     """
-    Founder MVP must expose the approved five coins.
+    Existing five-token reference remains available.
     """
 
     assert FOUNDER_TOKENS == (
@@ -60,12 +56,19 @@ def test_should_define_five_founder_tokens():
     )
 
 
-def test_should_scan_tokens_sequentially():
+def test_should_load_ranked_universe_by_default():
     """
-    Service should preserve token ordering.
+    Default service should use the universe loader.
     """
 
     scanned_tokens: list[str] = []
+
+    def fake_universe_loader():
+        return (
+            "BTC",
+            "ETH",
+            "SOL",
+        )
 
     def fake_scan(
         token: str,
@@ -84,28 +87,34 @@ def test_should_scan_tokens_sequentially():
 
     results = build_founder_dashboard_results(
         scan=fake_scan,
+        universe_loader=fake_universe_loader,
     )
 
-    assert scanned_tokens == list(
-        FOUNDER_TOKENS,
-    )
+    assert scanned_tokens == [
+        "BTC",
+        "ETH",
+        "SOL",
+    ]
 
     assert [
         result["token"]
         for result in results
-    ] == list(
-        FOUNDER_TOKENS,
-    )
-
-    assert len(
-        results,
-    ) == 5
+    ] == [
+        "BTC",
+        "ETH",
+        "SOL",
+    ]
 
 
-def test_should_preserve_successful_dashboard_card():
+def test_should_accept_explicit_token_collection():
     """
-    Successful scans should expose DashboardCard.
+    Explicit tokens should bypass universe loading.
     """
+
+    def failing_universe_loader():
+        raise AssertionError(
+            "Universe loader should not be called."
+        )
 
     def fake_scan(
         token: str,
@@ -119,22 +128,18 @@ def test_should_preserve_successful_dashboard_card():
         }
 
     results = build_founder_dashboard_results(
-
         tokens=[
             "btc",
         ],
-
         scan=fake_scan,
-
+        universe_loader=failing_universe_loader,
     )
 
-    result = results[0]
+    assert results[0]["token"] == "BTC"
 
-    assert result["token"] == "BTC"
+    assert results[0]["card"].token == "BTC"
 
-    assert result["card"].token == "BTC"
-
-    assert result["error"] is None
+    assert results[0]["error"] is None
 
 
 def test_should_preserve_failed_coin_and_continue():
@@ -150,7 +155,9 @@ def test_should_preserve_failed_coin_and_continue():
 
             return {
                 "success": False,
-                "error": "ETH scan unavailable.",
+                "error": (
+                    "ETH scan unavailable."
+                ),
             }
 
         return {
@@ -161,15 +168,12 @@ def test_should_preserve_failed_coin_and_continue():
         }
 
     results = build_founder_dashboard_results(
-
         tokens=[
             "BTC",
             "ETH",
             "SOL",
         ],
-
         scan=fake_scan,
-
     )
 
     assert len(
