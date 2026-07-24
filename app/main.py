@@ -1,9 +1,9 @@
 """
 AlphaRadar Founder MVP FastAPI Application.
 
-Run from the project root:
+Official launcher from the project root:
 
-    python app/main.py
+    python main.py
 
 Then open:
 
@@ -11,25 +11,42 @@ Then open:
 
 Responsibilities
 ----------------
-- Create the FastAPI application
-- Build the Founder multi-coin dashboard
-- Expose the application health endpoint
+- Display the Founder multi-coin dashboard
+- Expose shared dashboard data as JSON
+- Send the current dashboard snapshot to Telegram
+- Expose application health
 - Start the local Uvicorn server
 
 This module does NOT:
 - calculate market decisions
 - access persistence directly
-- send Telegram alerts
+- poll Telegram
+- schedule alerts
 - use background workers
 """
 
 from __future__ import annotations
 
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+import requests
+
+from fastapi import (
+    FastAPI,
+    HTTPException,
+)
+from fastapi.responses import (
+    HTMLResponse,
+)
+
+from application.founder_dashboard_data import (
+    serialize_founder_dashboard_results,
+)
 
 from application.founder_dashboard_service import (
     build_founder_dashboard_results,
+)
+
+from application.telegram_notifier import (
+    send_telegram_alert,
 )
 
 from presentation.founder_dashboard_presenter import (
@@ -59,6 +76,27 @@ app = FastAPI(
 
 
 # ==========================================================
+# Shared Dashboard Data
+# ==========================================================
+
+def build_current_dashboard_data() -> list[dict[str, object]]:
+    """
+    Run the engine and return one shared dashboard snapshot.
+
+    The same serialized structure is used by:
+
+    - Dashboard JSON API
+    - Telegram alert
+    """
+
+    results = build_founder_dashboard_results()
+
+    return serialize_founder_dashboard_results(
+        results,
+    )
+
+
+# ==========================================================
 # Routes
 # ==========================================================
 
@@ -76,6 +114,61 @@ def founder_home() -> str:
     return render_founder_dashboard(
         results,
     )
+
+
+@app.get(
+    "/api/dashboard",
+)
+def dashboard_api() -> list[dict[str, object]]:
+    """
+    Return the current five-coin engine snapshot as JSON.
+    """
+
+    return build_current_dashboard_data()
+
+
+@app.post(
+    "/telegram/send",
+)
+def telegram_send() -> dict[str, object]:
+    """
+    Send the current five-coin engine snapshot to Telegram.
+    """
+
+    dashboard_data = build_current_dashboard_data()
+
+    try:
+
+        return send_telegram_alert(
+
+            dashboard_data=dashboard_data,
+
+        )
+
+    except RuntimeError as error:
+
+        raise HTTPException(
+
+            status_code=503,
+
+            detail=str(
+                error,
+            ),
+
+        ) from error
+
+    except requests.RequestException as error:
+
+        raise HTTPException(
+
+            status_code=502,
+
+            detail=(
+                "Telegram API request failed: "
+                f"{error}"
+            ),
+
+        ) from error
 
 
 @app.get(
