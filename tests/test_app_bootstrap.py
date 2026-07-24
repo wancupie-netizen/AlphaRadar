@@ -1,6 +1,8 @@
 """
-Tests for AlphaRadar Founder MVP FastAPI Bootstrap.
+Tests for AlphaRadar Founder MVP FastAPI Application.
 """
+
+from unittest.mock import patch
 
 from fastapi import FastAPI
 
@@ -14,10 +16,6 @@ from app.main import (
     health_check,
 )
 
-
-# ==========================================================
-# Application Contract
-# ==========================================================
 
 def test_should_create_fastapi_application():
     """
@@ -44,35 +42,50 @@ def test_should_disable_public_documentation():
     assert app.redoc_url is None
 
 
-# ==========================================================
-# Founder Home
-# ==========================================================
+@patch(
+    "app.main.render_founder_dashboard"
+)
+@patch(
+    "app.main.build_founder_dashboard_results"
+)
+def test_should_render_founder_dashboard(
+    mock_build_results,
+    mock_render_dashboard,
+):
+    """
+    Root route should connect service to presenter.
+    """
 
-def test_should_render_founder_home():
-    """
-    Root page should clearly confirm that AlphaRadar is running.
-    """
+    results = [
+        {
+            "token": "BTC",
+            "card": None,
+            "error": "Test state.",
+        }
+    ]
+
+    mock_build_results.return_value = results
+
+    mock_render_dashboard.return_value = (
+        "<html>Founder Dashboard</html>"
+    )
 
     html = founder_home()
 
-    assert "<!DOCTYPE html>" in html
+    assert html == (
+        "<html>Founder Dashboard</html>"
+    )
 
-    assert "AlphaRadar" in html
+    mock_build_results.assert_called_once_with()
 
-    assert "Founder MVP" in html
+    mock_render_dashboard.assert_called_once_with(
+        results,
+    )
 
-    assert "running" in html
-
-    assert "Multi-coin intelligence dashboard" in html
-
-
-# ==========================================================
-# Health Check
-# ==========================================================
 
 def test_should_return_healthy_application_status():
     """
-    Health route should expose a minimal readiness response.
+    Health route should expose readiness response.
     """
 
     result = health_check()
@@ -84,13 +97,9 @@ def test_should_return_healthy_application_status():
     }
 
 
-# ==========================================================
-# Local Server Configuration
-# ==========================================================
-
 def test_should_use_founder_local_server_defaults():
     """
-    Local launch contract must remain simple for founders.
+    Local launch contract must remain simple.
     """
 
     assert HOST == "127.0.0.1"
