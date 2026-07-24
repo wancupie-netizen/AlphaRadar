@@ -7,10 +7,10 @@ current CoinMarketCap Top 100 universe.
 Responsibilities
 ----------------
 - Load the daily Top 100 CoinMarketCap universe
-- Run one production scan per token
+- Run one production scan per valid token
 - Preserve market-cap ranking order
-- Return successful DashboardCard objects
-- Preserve unavailable-token information
+- Preserve failed or unsupported-token information
+- Continue scanning after individual token failures
 
 This module does NOT:
 - render HTML
@@ -18,7 +18,7 @@ This module does NOT:
 - use threading
 - send Telegram alerts
 - schedule scans
-- retry failed scans automatically
+- retry scans automatically
 """
 
 from __future__ import annotations
@@ -42,8 +42,6 @@ from scanner.runner import (
 )
 
 
-# Kept only as a small local fallback reference.
-# The default production flow now loads CoinMarketCap Top 100.
 FOUNDER_TOKENS = (
     "BTC",
     "ETH",
@@ -65,8 +63,8 @@ def build_founder_dashboard_results(
     """
     Run sequential AlphaRadar scans.
 
-    When tokens are not supplied, the daily CoinMarketCap
-    Top 100 universe is loaded automatically.
+    Invalid or failed tokens remain in the output as
+    unavailable entries and do not stop the remaining scans.
     """
 
     resolved_tokens = (
@@ -77,13 +75,17 @@ def build_founder_dashboard_results(
 
     results: list[dict[str, object]] = []
 
-    for token in resolved_tokens:
+    for raw_token in resolved_tokens:
 
-        normalized_token = normalize_token(
-            token,
-        )
+        display_token = str(
+            raw_token,
+        ).strip()
 
         try:
+
+            normalized_token = normalize_token(
+                display_token,
+            )
 
             scan_result = scan(
                 normalized_token,
@@ -100,7 +102,10 @@ def build_founder_dashboard_results(
 
             results.append(
                 {
-                    "token": normalized_token,
+                    "token": (
+                        display_token
+                        or "UNKNOWN"
+                    ),
                     "card": None,
                     "error": str(
                         error,

@@ -64,6 +64,7 @@ def test_should_load_ranked_universe_by_default():
     scanned_tokens: list[str] = []
 
     def fake_universe_loader():
+
         return (
             "BTC",
             "ETH",
@@ -112,6 +113,7 @@ def test_should_accept_explicit_token_collection():
     """
 
     def failing_universe_loader():
+
         raise AssertionError(
             "Universe loader should not be called."
         )
@@ -186,6 +188,60 @@ def test_should_preserve_failed_coin_and_continue():
 
     assert results[1]["error"] == (
         "ETH scan unavailable."
+    )
+
+    assert results[2]["card"] is not None
+
+
+def test_should_preserve_unsupported_symbol_and_continue():
+    """
+    Unsupported CoinMarketCap symbols must not stop scanning.
+    """
+
+    scanned_tokens: list[str] = []
+
+    def fake_scan(
+        token: str,
+    ) -> dict:
+
+        scanned_tokens.append(
+            token,
+        )
+
+        return {
+            "success": True,
+            "dashboard": build_test_card(
+                token,
+            ),
+        }
+
+    results = build_founder_dashboard_results(
+        tokens=[
+            "BTC",
+            "币安人生",
+            "ETH",
+        ],
+        scan=fake_scan,
+    )
+
+    assert scanned_tokens == [
+        "BTC",
+        "ETH",
+    ]
+
+    assert len(
+        results,
+    ) == 3
+
+    assert results[1]["token"] == (
+        "币安人生"
+    )
+
+    assert results[1]["card"] is None
+
+    assert (
+        "unsupported characters"
+        in results[1]["error"]
     )
 
     assert results[2]["card"] is not None
